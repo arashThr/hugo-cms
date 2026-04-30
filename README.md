@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Hugo CMS Web Application
 
-## Getting Started
+A custom, web-based Content Management System for your static Hugo website.
 
-First, run the development server:
+## Features
+- **GitHub Integration:** Commit files directly to your repository via the GitHub API.
+- **Dynamic Configuration:** Select your repository and paths dynamically via the UI.
+- **Dual Editor Mode:** Switch seamlessly between a WYSIWYG Rich Text editor and a raw Markdown editor.
+- **Image Uploads:** Upload images and have them automatically pushed as base64 blobs alongside your markdown post.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Local Development
+
+1. Set up your `.env.local` file:
+```env
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your_random_secret_here
+GITHUB_ID=your_github_oauth_id
+GITHUB_SECRET=your_github_oauth_secret
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Run the development server:
+```bash
+npm install
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Production Deployment (Docker + Caddy)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This application is ready to be deployed using Docker and Docker Compose. It leverages Next.js standalone output for a highly optimized, minimal container size.
 
-## Learn More
+### 1. Update GitHub OAuth App
+Update your GitHub OAuth App's "Authorization callback URL" to your production domain:
+`https://your-domain.com/api/auth/callback/github`
 
-To learn more about Next.js, take a look at the following resources:
+### 2. Set Production Environment Variables
+Create a `.env` file on your server in the same directory as `docker-compose.yml`:
+```env
+NEXTAUTH_URL=https://your-domain.com
+NEXTAUTH_SECRET=your_secure_random_string (generate via: openssl rand -base64 32)
+GITHUB_ID=your_production_github_id
+GITHUB_SECRET=your_production_github_secret
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 3. Run with Docker Compose
+Start the application in the background:
+```bash
+docker-compose up -d --build
+```
+This will expose the app on port `3000` of your host machine.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 4. Setup Caddy Reverse Proxy
+If you are using Caddy to serve your domain, simply add this block to your `Caddyfile`:
 
-## Deploy on Vercel
+```caddyfile
+your-domain.com {
+    reverse_proxy localhost:3000
+}
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Reload Caddy (`caddy reload`), and your application will be securely available over HTTPS!
