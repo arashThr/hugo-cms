@@ -64,6 +64,7 @@
   background-color: var(--background);
   transition: all 0.2s;
   text-align: left;
+  color: var(--foreground);
 }
 
 .repoItem:hover {
@@ -198,4 +199,43 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.searchContainer {
+  display: flex;
+  align-items: center;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  transition: border-color 0.2s;
+}
+
+.searchContainer:focus-within {
+  border-color: var(--primary);
+}
+
+.searchIcon {
+  color: var(--muted-foreground);
+  margin-right: 0.75rem;
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--foreground);
+  font-size: 1rem;
+}
+
+.searchInput::placeholder {
+  color: var(--muted);
+}
+
+.loadMoreContainer {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
 }

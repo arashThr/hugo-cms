@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { useSettings } from "@/components/SettingsProvider";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { FileText, Plus, Settings, Check } from "lucide-react";
+import { FileText, Plus, Settings, Check, Search } from "lucide-react";
 import styles from "./page.module.css";
 
 export default function Home() {
@@ -15,6 +15,9 @@ export default function Home() {
   const [tree, setTree] = useState<any[]>([]);
   const [loadingTree, setLoadingTree] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [visibleCount, setVisibleCount] = useState(20);
 
   useEffect(() => {
     if (session && !settings.repository) {
@@ -124,11 +127,17 @@ export default function Home() {
   }
 
   // Filter tree to show only files in contentPath
-  const posts = tree.filter((item) => 
+  const allPosts = tree.filter((item) => 
     item.path.startsWith(settings.contentPath) && 
     item.type === "blob" && 
     item.path.endsWith(".md")
+  ).sort((a, b) => b.path.localeCompare(a.path));
+
+  const filteredPosts = allPosts.filter(post => 
+    post.path.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  
+  const visiblePosts = filteredPosts.slice(0, visibleCount);
 
   return (
     <div className={styles.dashboard}>
@@ -141,16 +150,27 @@ export default function Home() {
           <button className="button button-outline" onClick={() => setShowSettings(true)}>
             <Settings size={16} />
           </button>
-          <Link href="/editor" className="button">
+          <Link href="/editor" className="button" style={{ whiteSpace: 'nowrap' }}>
             <Plus size={16} />
             New Post
           </Link>
         </div>
       </header>
+      
+      <div className={styles.searchContainer}>
+        <Search size={18} className={styles.searchIcon} />
+        <input 
+          type="text" 
+          placeholder="Search posts..." 
+          className={styles.searchInput}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
 
       {loadingTree ? (
         <div className={styles.loading}>Loading posts...</div>
-      ) : posts.length === 0 ? (
+      ) : allPosts.length === 0 ? (
         <div className={styles.emptyState}>
           <FileText size={48} className={styles.emptyIcon} />
           <h3>No posts found</h3>
@@ -158,17 +178,36 @@ export default function Home() {
           <Link href="/editor" className="button">Create your first post</Link>
         </div>
       ) : (
-        <div className={styles.postList}>
-          {posts.map((post) => {
-            const filename = post.path.split("/").pop() || post.path;
-            return (
-              <Link href={`/editor?path=${encodeURIComponent(post.path)}`} key={post.sha} className={styles.postItem}>
-                <FileText size={20} className={styles.postIcon} />
-                <span className={styles.postName}>{filename}</span>
-              </Link>
-            );
-          })}
-        </div>
+        <>
+          {filteredPosts.length === 0 ? (
+             <div className={styles.emptyState}>
+               <p>No posts match your search.</p>
+             </div>
+          ) : (
+            <div className={styles.postList}>
+              {visiblePosts.map((post) => {
+                const filename = post.path.split("/").pop() || post.path;
+                return (
+                  <Link href={`/editor?path=${encodeURIComponent(post.path)}`} key={post.sha} className={styles.postItem}>
+                    <FileText size={20} className={styles.postIcon} />
+                    <span className={styles.postName}>{filename}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+          
+          {visiblePosts.length < filteredPosts.length && (
+            <div className={styles.loadMoreContainer}>
+              <button 
+                className="button button-outline" 
+                onClick={() => setVisibleCount(v => v + 20)}
+              >
+                Show More
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

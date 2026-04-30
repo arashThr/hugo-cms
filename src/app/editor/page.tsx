@@ -248,14 +248,6 @@ function EditorForm() {
           </Link>
           <span className={styles.repoName}>{settings.repository}</span>
         </div>
-        <button 
-          className="button" 
-          onClick={publish} 
-          disabled={publishing || !title || fetching}
-        >
-          {publishing && <Loader2 size={16} className={styles.spin} />}
-          {publishing ? 'Publishing...' : 'Publish Post'}
-        </button>
       </header>
 
       <div className={styles.metaContainer}>
@@ -370,6 +362,17 @@ function EditorForm() {
             />
           )}
         </div>
+      </div>
+      
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+        <button
+          className="button"
+          onClick={publish}
+          disabled={publishing || !title || fetching}
+        >
+          {publishing && <Loader2 size={16} className={styles.spin} />}
+          {publishing ? 'Publishing...' : 'Publish Post'}
+        </button>
       </div>
     </div>
   );

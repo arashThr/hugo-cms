@@ -60,6 +60,13 @@
   gap: 1.5rem;
 }
 
+@media (max-width: 600px) {
+  .metaGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
 .inputGroup {
   display: flex;
   flex-direction: column;
