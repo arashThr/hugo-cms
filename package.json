@@ -11,6 +11,7 @@
   "dependencies": {
     "@iarna/toml": "^2.2.5",
     "@octokit/rest": "^22.0.1",
+    "@tailwindcss/typography": "^0.5.19",
     "@tiptap/extension-image": "^3.22.5",
     "@tiptap/react": "^3.22.5",
     "@tiptap/starter-kit": "^3.22.5",
