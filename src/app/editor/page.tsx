@@ -8,9 +8,7 @@ import { useState, useRef, useEffect, Suspense } from 'react';
 import { useSettings } from '@/components/SettingsProvider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { ArrowLeft, Image as ImageIcon, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import styles from './editor.module.css';
 
 function EditorForm() {
   const { data: session } = useSession();
@@ -22,6 +20,11 @@ function EditorForm() {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 16));
   const [tags, setTags] = useState('');
+  
+  // Extra states for the new design
+  const [slug, setSlug] = useState('');
+  const [layout, setLayout] = useState('Single Post (Default)');
+
   const [markdown, setMarkdown] = useState('');
   const [images, setImages] = useState<{name: string, base64: string, markdownPath: string}[]>([]);
   const [publishing, setPublishing] = useState(false);
@@ -41,7 +44,7 @@ function EditorForm() {
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class: styles.prose,
+        class: "font-body-lg text-[18px] text-on-surface min-h-[600px] outline-none leading-relaxed prose prose-slate max-w-none",
       },
     },
   });
@@ -50,17 +53,13 @@ function EditorForm() {
     if (!settings.repository) return md;
     let processed = md;
     
-    // 1. Replace new uploaded images (markdown paths) with their base64 representation so TipTap can render them
     currentImages.forEach(img => {
       processed = processed.split(img.markdownPath).join(img.base64);
     });
 
-    // 2. Replace old local images with absolute GitHub Raw URLs so they load in the browser
     const [owner, repo] = settings.repository.split("/");
     processed = processed.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
       if (src.startsWith('http') || src.startsWith('data:')) return match;
-      
-      // Assume local paths map to the 'static' folder in the repo
       const cleanSrc = src.startsWith('/') ? src : `/${src}`;
       const githubUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/static${cleanSrc}`;
       return `![${alt}](${githubUrl})`;
@@ -74,11 +73,9 @@ function EditorForm() {
     let processed = md;
     const [owner, repo] = settings.repository.split("/");
     
-    // 1. Revert github raw URLs back to local paths
     const githubPrefix = `https://raw.githubusercontent.com/${owner}/${repo}/main/static`;
     processed = processed.split(githubPrefix).join('');
 
-    // 2. Revert base64 strings back to their proper markdown paths
     currentImages.forEach(img => {
       processed = processed.split(img.base64).join(img.markdownPath);
     });
@@ -122,6 +119,10 @@ function EditorForm() {
                 const rawTags = tagsMatch[1].replace(/["']/g, "").split(",").map((t: string) => t.trim()).join(", ");
                 setTags(rawTags);
               }
+
+              // Set Slug based on filename if editing
+              const filename = editPath.split("/").pop()?.replace('.md', '');
+              if (filename) setSlug(filename);
               
               const cleanMd = md.replace(/^\s+/, '');
               setMarkdown(cleanMd);
@@ -173,7 +174,6 @@ function EditorForm() {
           const newImages = [...prev, { name: filename, base64, markdownPath: imageMarkdownPath }];
           
           if (viewMode === 'rich' && editor) {
-            // Inject base64 visually so it renders, it will be reverted on save
             editor.chain().focus().setImage({ src: base64, alt: filename }).run();
           } else {
             const imageMarkdownString = `\n![${filename}](${imageMarkdownPath})\n`;
@@ -202,7 +202,6 @@ function EditorForm() {
 
   const publish = async () => {
     if (!title) return;
-    
     setPublishing(true);
     
     // @ts-ignore
@@ -240,147 +239,223 @@ function EditorForm() {
   if (!isLoaded || !settings.repository) return null;
 
   return (
-    <div className={styles.container}>
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <Link href="/" className="button button-outline">
-            <ArrowLeft size={16} /> Back
+    <div className="bg-background text-on-background font-body-md h-screen flex flex-col overflow-hidden antialiased">
+      {/* Transactional Top Bar */}
+      <header className="flex justify-between items-center h-16 px-6 border-b border-outline-variant bg-surface-container-lowest shrink-0 z-10">
+        <div className="flex items-center gap-4">
+          <Link href="/" className="text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center">
+            <span className="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
           </Link>
-          <span className={styles.repoName}>{settings.repository}</span>
+          <div className="h-4 w-[1px] bg-outline-variant"></div>
+          <span className="font-body-md text-[15px] text-on-surface-variant">
+            {editPath ? 'Editing: ' : 'New Post: '} 
+            <strong className="text-on-surface font-semibold">{title || 'Untitled'}</strong>
+          </span>
+        </div>
+        <div className="flex items-center gap-[16px]">
+          {/* Status Indicator */}
+          {fetching ? (
+            <div className="flex items-center gap-xs px-3 py-1.5 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-[12px] uppercase tracking-widest">
+              <span className="w-2 h-2 rounded-full bg-outline animate-pulse"></span>
+              LOADING
+            </div>
+          ) : (
+            <div className="flex items-center gap-xs px-3 py-1.5 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-[12px] uppercase tracking-widest">
+              <span className="w-2 h-2 rounded-full bg-outline"></span>
+              DRAFT
+            </div>
+          )}
+          
+          <div className="h-6 w-[1px] bg-outline-variant mx-1"></div>
+          
+          <Link href="/" className="font-body-md text-[15px] text-on-surface-variant hover:bg-surface-container px-4 py-2 rounded-lg transition-colors">
+            Cancel
+          </Link>
+          
+          <button 
+            onClick={publish} 
+            disabled={publishing || !title || fetching}
+            className="font-body-md text-[15px] bg-primary text-on-primary hover:opacity-90 px-5 py-2 rounded-lg transition-opacity flex items-center gap-1 shadow-sm disabled:opacity-50"
+          >
+            {publishing ? 'Publishing...' : 'Publish'}
+            {!publishing && <span className="material-symbols-outlined text-[18px]" data-icon="send">send</span>}
+          </button>
         </div>
       </header>
 
-      <div className={styles.metaContainer}>
-        <input 
-          className={styles.titleInput} 
-          placeholder="Post Title..." 
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          disabled={fetching}
-        />
-        <div className={styles.metaGrid}>
-          <div className={styles.inputGroup}>
-            <label>Date</label>
+      {/* Main Workspace */}
+      <main className="flex flex-1 overflow-hidden relative">
+        {/* Editor Canvas */}
+        <section className="flex-1 overflow-y-auto flex justify-center py-[48px] relative scroll-smooth">
+          <div className="w-[800px] max-w-full px-[24px] flex flex-col gap-[24px] pb-[48px]">
+            {/* Document Title */}
             <input 
-              type="datetime-local" 
-              className={styles.input}
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              disabled={fetching}
-            />
-          </div>
-          <div className={styles.inputGroup}>
-            <label>Tags (comma separated)</label>
-            <input 
+              className="font-headline-xl text-[36px] font-bold text-on-surface bg-transparent border-none focus:ring-0 p-0 placeholder:text-outline-variant w-full outline-none" 
+              placeholder="Post Title" 
               type="text" 
-              className={styles.input}
-              placeholder="e.g. tech, design"
-              value={tags}
-              onChange={e => setTags(e.target.value)}
+              value={title}
+              onChange={e => setTitle(e.target.value)}
               disabled={fetching}
             />
-          </div>
-        </div>
-      </div>
 
-      <div className={styles.editorContainer}>
-        <div className={styles.toolbar}>
-          {viewMode === 'rich' ? (
-            <>
-              <button 
-                onClick={() => editor?.chain().focus().toggleBold().run()}
-                className={`${styles.toolButton} ${editor?.isActive('bold') ? styles.active : ''}`}
-                disabled={fetching}
-              >Bold</button>
-              <button 
-                onClick={() => editor?.chain().focus().toggleItalic().run()}
-                className={`${styles.toolButton} ${editor?.isActive('italic') ? styles.active : ''}`}
-                disabled={fetching}
-              >Italic</button>
-              <button 
-                onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
-                className={`${styles.toolButton} ${editor?.isActive('heading', { level: 2 }) ? styles.active : ''}`}
-                disabled={fetching}
-              >H2</button>
-              <button 
-                onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
-                className={`${styles.toolButton} ${editor?.isActive('heading', { level: 3 }) ? styles.active : ''}`}
-                disabled={fetching}
-              >H3</button>
-              <button 
-                onClick={() => editor?.chain().focus().toggleBulletList().run()}
-                className={`${styles.toolButton} ${editor?.isActive('bulletList') ? styles.active : ''}`}
-                disabled={fetching}
-              >List</button>
-            </>
-          ) : (
-            <span className={styles.toolbarLabel}>Markdown Source</span>
-          )}
-          
-          <div className={styles.divider}></div>
-          
-          <button 
-            onClick={() => fileInputRef.current?.click()}
-            className={styles.toolButton}
-            title="Insert Image"
-            disabled={fetching}
-          >
-            <ImageIcon size={16} /> Insert Image
-          </button>
-          <input 
-            type="file" 
-            accept="image/*" 
-            ref={fileInputRef}
-            style={{ display: 'none' }}
-            onChange={handleImageUpload}
-          />
-          
-          <div className={styles.viewToggle}>
-            <button 
-              className={`${styles.toggleBtn} ${viewMode === 'rich' ? styles.active : ''}`}
-              onClick={() => toggleView('rich')}
-            >Rich Text</button>
-            <button 
-              className={`${styles.toggleBtn} ${viewMode === 'markdown' ? styles.active : ''}`}
-              onClick={() => toggleView('markdown')}
-            >Markdown</button>
-          </div>
-        </div>
+            {/* IDE-Style Toolbar */}
+            <div className="sticky top-0 z-20 flex items-center justify-between p-1 border border-outline-variant rounded-lg bg-surface-container-lowest/90 backdrop-blur-sm shadow-sm transition-all">
+              {/* Formatting Tools */}
+              <div className="flex items-center gap-1">
+                {viewMode === 'rich' ? (
+                  <>
+                    <button onClick={() => editor?.chain().focus().toggleBold().run()} className={`p-2 rounded transition-colors ${editor?.isActive('bold') ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}><span className="material-symbols-outlined" data-icon="format_bold">format_bold</span></button>
+                    <button onClick={() => editor?.chain().focus().toggleItalic().run()} className={`p-2 rounded transition-colors ${editor?.isActive('italic') ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}><span className="material-symbols-outlined" data-icon="format_italic">format_italic</span></button>
+                    <button onClick={() => editor?.chain().focus().toggleStrike().run()} className={`p-2 rounded transition-colors ${editor?.isActive('strike') ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}><span className="material-symbols-outlined" data-icon="strikethrough_s">strikethrough_s</span></button>
+                    <div className="w-[1px] h-4 bg-outline-variant mx-1"></div>
+                    <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded hover:bg-surface-container text-on-surface-variant transition-colors"><span className="material-symbols-outlined" data-icon="image">image</span></button>
+                    <div className="w-[1px] h-4 bg-outline-variant mx-1"></div>
+                    <button onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} className={`p-2 rounded transition-colors font-bold ${editor?.isActive('heading', { level: 2 }) ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}>H2</button>
+                    <button onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} className={`p-2 rounded transition-colors font-bold ${editor?.isActive('heading', { level: 3 }) ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}>H3</button>
+                    <div className="w-[1px] h-4 bg-outline-variant mx-1"></div>
+                    <button onClick={() => editor?.chain().focus().toggleBulletList().run()} className={`p-2 rounded transition-colors ${editor?.isActive('bulletList') ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}><span className="material-symbols-outlined" data-icon="format_list_bulleted">format_list_bulleted</span></button>
+                    <button onClick={() => editor?.chain().focus().toggleBlockquote().run()} className={`p-2 rounded transition-colors ${editor?.isActive('blockquote') ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}><span className="material-symbols-outlined" data-icon="format_quote">format_quote</span></button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded hover:bg-surface-container text-on-surface-variant transition-colors flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[16px]" data-icon="image">image</span>
+                      <span className="text-[13px] font-medium">Insert Image</span>
+                    </button>
+                  </>
+                )}
+                
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  onChange={handleImageUpload}
+                />
+              </div>
 
-        <div className={styles.editorWrapper}>
-          {fetching ? (
-            <div className={styles.loading}>Loading post content...</div>
-          ) : viewMode === 'rich' ? (
-            <EditorContent editor={editor} />
-          ) : (
-            <textarea
-              ref={textareaRef}
-              className={styles.rawTextarea}
-              value={markdown}
-              onChange={(e) => setMarkdown(e.target.value)}
-              placeholder="Write your markdown here..."
-            />
-          )}
-        </div>
-      </div>
-      
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
-        <button
-          className="button"
-          onClick={publish}
-          disabled={publishing || !title || fetching}
-        >
-          {publishing && <Loader2 size={16} className={styles.spin} />}
-          {publishing ? 'Publishing...' : 'Publish Post'}
-        </button>
-      </div>
+              {/* Dual Mode Toggle */}
+              <div className="flex items-center p-1 bg-surface-container rounded-md border border-outline-variant/50">
+                <button 
+                  onClick={() => toggleView('markdown')}
+                  className={`px-3 py-1 rounded font-label-caps text-[12px] uppercase tracking-widest transition-colors flex items-center gap-1 ${viewMode === 'markdown' ? 'bg-surface-container-lowest text-on-surface shadow-sm border border-outline-variant/30' : 'text-on-surface-variant hover:text-on-surface'}`}
+                >
+                  <span className="material-symbols-outlined text-[16px]" data-icon="markdown">markdown</span>
+                  MARKDOWN
+                </button>
+                <button 
+                  onClick={() => toggleView('rich')}
+                  className={`px-3 py-1 rounded font-label-caps text-[12px] uppercase tracking-widest transition-colors flex items-center gap-1 ${viewMode === 'rich' ? 'bg-surface-container-lowest text-on-surface shadow-sm border border-outline-variant/30' : 'text-on-surface-variant hover:text-on-surface'}`}
+                >
+                  <span className="material-symbols-outlined text-[16px]" data-icon="view_headline">view_headline</span>
+                  RICH TEXT
+                </button>
+              </div>
+            </div>
+
+            {/* Content Area */}
+            {fetching ? (
+              <div className="py-12 flex justify-center text-on-surface-variant">Loading content...</div>
+            ) : viewMode === 'rich' ? (
+              <EditorContent editor={editor} />
+            ) : (
+              <textarea
+                ref={textareaRef}
+                className="w-full min-h-[600px] border-none bg-transparent outline-none resize-y font-mono text-[14px] leading-[1.6] text-on-surface focus:ring-0 p-0"
+                value={markdown}
+                onChange={(e) => setMarkdown(e.target.value)}
+                placeholder="Write your markdown here..."
+              />
+            )}
+          </div>
+        </section>
+
+        {/* Right Sidebar (Front Matter / Metadata) */}
+        <aside className="w-80 border-l border-outline-variant bg-surface-container-lowest shrink-0 overflow-y-auto flex flex-col shadow-[-4px_0_24px_rgba(0,0,0,0.02)] hidden lg:flex">
+          <div className="p-[16px] border-b border-outline-variant flex items-center justify-between sticky top-0 bg-surface-container-lowest/95 backdrop-blur z-10">
+            <h2 className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Post Metadata</h2>
+            <button className="text-on-surface-variant hover:text-on-surface"><span className="material-symbols-outlined text-[20px]" data-icon="tune">tune</span></button>
+          </div>
+          
+          <div className="p-[24px] flex flex-col gap-[24px]">
+            {/* URL Slug */}
+            <div className="flex flex-col gap-1">
+              <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">URL Slug</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-outline font-mono text-[14px]">/posts/</span>
+                <input 
+                  className="w-full bg-surface border border-outline-variant rounded-lg py-2 pl-16 pr-3 font-mono text-[14px] text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all" 
+                  type="text" 
+                  value={slug || title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "")}
+                  onChange={e => setSlug(e.target.value)}
+                  disabled={fetching}
+                />
+              </div>
+            </div>
+
+            {/* Publish Date */}
+            <div className="flex flex-col gap-1">
+              <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Publish Date</label>
+              <div className="relative">
+                <input 
+                  className="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 font-body-md text-[15px] text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all" 
+                  type="datetime-local" 
+                  value={date}
+                  onChange={e => setDate(e.target.value)}
+                  disabled={fetching}
+                />
+              </div>
+            </div>
+
+            {/* Tags */}
+            <div className="flex flex-col gap-[8px]">
+              <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Tags (comma separated)</label>
+              <input 
+                className="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 font-body-md text-[15px] text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all" 
+                placeholder="e.g. tech, design" 
+                type="text"
+                value={tags}
+                onChange={e => setTags(e.target.value)}
+                disabled={fetching}
+              />
+            </div>
+
+            <div className="h-[1px] w-full bg-outline-variant my-1"></div>
+
+            {/* Featured Image */}
+            <div className="flex flex-col gap-[8px]">
+              <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Featured Image</label>
+              <div className="border-2 border-dashed border-outline-variant rounded-lg p-[16px] flex flex-col items-center justify-center gap-2 bg-surface hover:bg-surface-container-high transition-colors cursor-pointer group">
+                <div className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
+                  <span className="material-symbols-outlined" data-icon="add_photo_alternate">add_photo_alternate</span>
+                </div>
+                <span className="font-body-md text-[13px] text-on-surface-variant text-center">Click to upload<br/>(Coming Soon)</span>
+              </div>
+            </div>
+
+            {/* Layout Template */}
+            <div className="flex flex-col gap-1 mt-[8px]">
+              <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Layout Template</label>
+              <select 
+                className="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 font-body-md text-[15px] text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all appearance-none cursor-pointer"
+                value={layout}
+                onChange={e => setLayout(e.target.value)}
+              >
+                <option>Single Post (Default)</option>
+                <option>Full Width Hero</option>
+                <option>Documentation Article</option>
+              </select>
+            </div>
+          </div>
+        </aside>
+      </main>
     </div>
   );
 }
 
 export default function EditorPage() {
   return (
-    <Suspense fallback={<div>Loading editor...</div>}>
+    <Suspense fallback={<div className="flex h-screen w-full items-center justify-center text-on-surface-variant font-body-md">Loading editor...</div>}>
       <EditorForm />
     </Suspense>
   );
