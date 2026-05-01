@@ -32,6 +32,8 @@ function EditorForm() {
   const [viewMode, setViewMode] = useState<'markdown' | 'rich'>('rich');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const featuredImageInputRef = useRef<HTMLInputElement>(null);
+  const [featuredImage, setFeaturedImage] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const editor = useEditor({
@@ -199,6 +201,17 @@ function EditorForm() {
       reader.readAsDataURL(file);
     }
   };
+  const handleFeaturedImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        setFeaturedImage(base64);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const publish = async () => {
     if (!title) return;
@@ -241,52 +254,48 @@ function EditorForm() {
   return (
     <div className="bg-background text-on-background font-body-md h-screen flex flex-col overflow-hidden antialiased">
       {/* Transactional Top Bar */}
-      <header className="flex justify-between items-center h-16 px-6 border-b border-outline-variant bg-surface-container-lowest shrink-0 z-10">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center">
+      <header className="flex justify-between items-center h-16 px-4 md:px-6 border-b border-outline-variant bg-surface-container-lowest shrink-0 z-10 gap-2 overflow-hidden">
+        <div className="flex items-center gap-2 md:gap-4 min-w-0">
+          <Link href="/" className="text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
           </Link>
-          <div className="h-4 w-[1px] bg-outline-variant"></div>
-          <span className="font-body-md text-[15px] text-on-surface-variant">
-            {editPath ? 'Editing: ' : 'New Post: '} 
-            <strong className="text-on-surface font-semibold">{title || 'Untitled'}</strong>
-          </span>
+          <div className="h-4 w-[1px] bg-outline-variant shrink-0"></div>
+          <div className="font-body-md text-[15px] text-on-surface-variant flex items-center gap-1 min-w-0">
+            <span className="hidden md:inline shrink-0">{editPath ? 'Editing:' : 'New:'}</span>
+            <strong className="text-on-surface font-semibold truncate max-w-[120px] md:max-w-[300px]">{title || 'Untitled'}</strong>
+          </div>
         </div>
-        <div className="flex items-center gap-[16px]">
+        <div className="flex items-center gap-2 md:gap-[16px] shrink-0">
           {/* Status Indicator */}
-          {fetching ? (
-            <div className="flex items-center gap-xs px-3 py-1.5 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-[12px] uppercase tracking-widest">
-              <span className="w-2 h-2 rounded-full bg-outline animate-pulse"></span>
-              LOADING
-            </div>
-          ) : (
-            <div className="flex items-center gap-xs px-3 py-1.5 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-[12px] uppercase tracking-widest">
-              <span className="w-2 h-2 rounded-full bg-outline"></span>
-              DRAFT
+          {fetching && (
+            <div className="flex items-center gap-xs px-2 md:px-3 py-1.5 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-[10px] md:text-[12px] uppercase tracking-widest shrink-0">
+              <span className="w-2 h-2 rounded-full bg-outline animate-pulse shrink-0"></span>
+              <span className="hidden md:inline">LOADING</span>
             </div>
           )}
           
-          <div className="h-6 w-[1px] bg-outline-variant mx-1"></div>
+          <div className="hidden md:block h-6 w-[1px] bg-outline-variant mx-1"></div>
           
-          <Link href="/" className="font-body-md text-[15px] text-on-surface-variant hover:bg-surface-container px-4 py-2 rounded-lg transition-colors">
+          <Link href="/" className="hidden md:block font-body-md text-[15px] text-on-surface-variant hover:bg-surface-container px-4 py-2 rounded-lg transition-colors">
             Cancel
           </Link>
           
           <button 
             onClick={publish} 
             disabled={publishing || !title || fetching}
-            className="font-body-md text-[15px] bg-primary text-on-primary hover:opacity-90 px-5 py-2 rounded-lg transition-opacity flex items-center gap-1 shadow-sm disabled:opacity-50"
+            className="font-body-md text-[13px] md:text-[15px] bg-primary text-on-primary hover:opacity-90 px-3 md:px-5 py-2 rounded-lg transition-opacity flex items-center gap-1 shadow-sm disabled:opacity-50 shrink-0"
           >
-            {publishing ? 'Publishing...' : 'Publish'}
-            {!publishing && <span className="material-symbols-outlined text-[18px]" data-icon="send">send</span>}
+            <span className="hidden md:inline">{publishing ? 'Publishing...' : 'Publish'}</span>
+            <span className="md:hidden">{publishing ? 'Wait...' : 'Publish'}</span>
+            {!publishing && <span className="material-symbols-outlined text-[16px] md:text-[18px]" data-icon="send">send</span>}
           </button>
         </div>
       </header>
 
       {/* Main Workspace */}
-      <main className="flex flex-1 overflow-hidden relative">
+      <main className="flex flex-1 overflow-y-auto lg:overflow-hidden relative flex-col lg:flex-row">
         {/* Editor Canvas */}
-        <section className="flex-1 overflow-y-auto flex justify-center py-[48px] relative scroll-smooth">
+        <section className="flex-1 lg:overflow-y-auto flex justify-center py-[24px] lg:py-[48px] relative scroll-smooth w-full">
           <div className="w-[800px] max-w-full px-[24px] flex flex-col gap-[24px] pb-[48px]">
             {/* Document Title */}
             <input 
@@ -299,26 +308,26 @@ function EditorForm() {
             />
 
             {/* IDE-Style Toolbar */}
-            <div className="sticky top-0 z-20 flex items-center justify-between p-1 border border-outline-variant rounded-lg bg-surface-container-lowest/90 backdrop-blur-sm shadow-sm transition-all">
+            <div className="sticky top-0 z-20 flex items-center p-1 border border-outline-variant rounded-lg bg-surface-container-lowest/90 backdrop-blur-sm shadow-sm transition-all overflow-x-auto gap-2 hide-scrollbar">
               {/* Formatting Tools */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink-0">
                 {viewMode === 'rich' ? (
                   <>
-                    <button onClick={() => editor?.chain().focus().toggleBold().run()} className={`p-2 rounded transition-colors ${editor?.isActive('bold') ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}><span className="material-symbols-outlined" data-icon="format_bold">format_bold</span></button>
-                    <button onClick={() => editor?.chain().focus().toggleItalic().run()} className={`p-2 rounded transition-colors ${editor?.isActive('italic') ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}><span className="material-symbols-outlined" data-icon="format_italic">format_italic</span></button>
-                    <button onClick={() => editor?.chain().focus().toggleStrike().run()} className={`p-2 rounded transition-colors ${editor?.isActive('strike') ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}><span className="material-symbols-outlined" data-icon="strikethrough_s">strikethrough_s</span></button>
-                    <div className="w-[1px] h-4 bg-outline-variant mx-1"></div>
-                    <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded hover:bg-surface-container text-on-surface-variant transition-colors"><span className="material-symbols-outlined" data-icon="image">image</span></button>
-                    <div className="w-[1px] h-4 bg-outline-variant mx-1"></div>
-                    <button onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} className={`p-2 rounded transition-colors font-bold ${editor?.isActive('heading', { level: 2 }) ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}>H2</button>
-                    <button onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} className={`p-2 rounded transition-colors font-bold ${editor?.isActive('heading', { level: 3 }) ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}>H3</button>
-                    <div className="w-[1px] h-4 bg-outline-variant mx-1"></div>
-                    <button onClick={() => editor?.chain().focus().toggleBulletList().run()} className={`p-2 rounded transition-colors ${editor?.isActive('bulletList') ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}><span className="material-symbols-outlined" data-icon="format_list_bulleted">format_list_bulleted</span></button>
-                    <button onClick={() => editor?.chain().focus().toggleBlockquote().run()} className={`p-2 rounded transition-colors ${editor?.isActive('blockquote') ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}><span className="material-symbols-outlined" data-icon="format_quote">format_quote</span></button>
+                    <button onClick={() => editor?.chain().focus().toggleBold().run()} className={`p-2 rounded transition-colors shrink-0 ${editor?.isActive('bold') ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}><span className="material-symbols-outlined" data-icon="format_bold">format_bold</span></button>
+                    <button onClick={() => editor?.chain().focus().toggleItalic().run()} className={`p-2 rounded transition-colors shrink-0 ${editor?.isActive('italic') ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}><span className="material-symbols-outlined" data-icon="format_italic">format_italic</span></button>
+                    <button onClick={() => editor?.chain().focus().toggleStrike().run()} className={`p-2 rounded transition-colors shrink-0 ${editor?.isActive('strike') ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}><span className="material-symbols-outlined" data-icon="strikethrough_s">strikethrough_s</span></button>
+                    <div className="w-[1px] h-4 bg-outline-variant mx-1 shrink-0"></div>
+                    <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded hover:bg-surface-container text-on-surface-variant transition-colors shrink-0"><span className="material-symbols-outlined" data-icon="image">image</span></button>
+                    <div className="w-[1px] h-4 bg-outline-variant mx-1 shrink-0"></div>
+                    <button onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} className={`p-2 rounded transition-colors font-bold shrink-0 ${editor?.isActive('heading', { level: 2 }) ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}>H2</button>
+                    <button onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} className={`p-2 rounded transition-colors font-bold shrink-0 ${editor?.isActive('heading', { level: 3 }) ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}>H3</button>
+                    <div className="w-[1px] h-4 bg-outline-variant mx-1 shrink-0"></div>
+                    <button onClick={() => editor?.chain().focus().toggleBulletList().run()} className={`p-2 rounded transition-colors shrink-0 ${editor?.isActive('bulletList') ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}><span className="material-symbols-outlined" data-icon="format_list_bulleted">format_list_bulleted</span></button>
+                    <button onClick={() => editor?.chain().focus().toggleBlockquote().run()} className={`p-2 rounded transition-colors shrink-0 ${editor?.isActive('blockquote') ? 'bg-surface-container text-on-surface' : 'hover:bg-surface-container text-on-surface-variant'}`}><span className="material-symbols-outlined" data-icon="format_quote">format_quote</span></button>
                   </>
                 ) : (
                   <>
-                    <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded hover:bg-surface-container text-on-surface-variant transition-colors flex items-center gap-1">
+                    <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded hover:bg-surface-container text-on-surface-variant transition-colors flex items-center gap-1 shrink-0">
                       <span className="material-symbols-outlined text-[16px]" data-icon="image">image</span>
                       <span className="text-[13px] font-medium">Insert Image</span>
                     </button>
@@ -335,20 +344,22 @@ function EditorForm() {
               </div>
 
               {/* Dual Mode Toggle */}
-              <div className="flex items-center p-1 bg-surface-container rounded-md border border-outline-variant/50">
+              <div className="flex items-center p-1 bg-surface-container rounded-md border border-outline-variant/50 shrink-0 ml-auto">
                 <button 
                   onClick={() => toggleView('markdown')}
                   className={`px-3 py-1 rounded font-label-caps text-[12px] uppercase tracking-widest transition-colors flex items-center gap-1 ${viewMode === 'markdown' ? 'bg-surface-container-lowest text-on-surface shadow-sm border border-outline-variant/30' : 'text-on-surface-variant hover:text-on-surface'}`}
                 >
                   <span className="material-symbols-outlined text-[16px]" data-icon="markdown">markdown</span>
-                  MARKDOWN
+                  <span className="hidden sm:inline">MARKDOWN</span>
+                  <span className="sm:hidden">MD</span>
                 </button>
                 <button 
                   onClick={() => toggleView('rich')}
                   className={`px-3 py-1 rounded font-label-caps text-[12px] uppercase tracking-widest transition-colors flex items-center gap-1 ${viewMode === 'rich' ? 'bg-surface-container-lowest text-on-surface shadow-sm border border-outline-variant/30' : 'text-on-surface-variant hover:text-on-surface'}`}
                 >
                   <span className="material-symbols-outlined text-[16px]" data-icon="view_headline">view_headline</span>
-                  RICH TEXT
+                  <span className="hidden sm:inline">RICH TEXT</span>
+                  <span className="sm:hidden">RICH</span>
                 </button>
               </div>
             </div>
@@ -371,7 +382,7 @@ function EditorForm() {
         </section>
 
         {/* Right Sidebar (Front Matter / Metadata) */}
-        <aside className="w-80 border-l border-outline-variant bg-surface-container-lowest shrink-0 overflow-y-auto flex flex-col shadow-[-4px_0_24px_rgba(0,0,0,0.02)] hidden lg:flex">
+        <aside className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-outline-variant bg-surface-container-lowest shrink-0 lg:overflow-y-auto flex flex-col shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
           <div className="p-[16px] border-b border-outline-variant flex items-center justify-between sticky top-0 bg-surface-container-lowest/95 backdrop-blur z-10">
             <h2 className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Post Metadata</h2>
             <button className="text-on-surface-variant hover:text-on-surface"><span className="material-symbols-outlined text-[20px]" data-icon="tune">tune</span></button>
@@ -384,7 +395,7 @@ function EditorForm() {
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-outline font-mono text-[14px]">/posts/</span>
                 <input 
-                  className="w-full bg-surface border border-outline-variant rounded-lg py-2 pl-16 pr-3 font-mono text-[14px] text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all" 
+                  className="w-full bg-surface border border-outline-variant rounded-lg py-2 pl-[70px] pr-3 font-mono text-[14px] text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all" 
                   type="text" 
                   value={slug || title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "")}
                   onChange={e => setSlug(e.target.value)}
@@ -425,11 +436,21 @@ function EditorForm() {
             {/* Featured Image */}
             <div className="flex flex-col gap-[8px]">
               <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Featured Image</label>
-              <div className="border-2 border-dashed border-outline-variant rounded-lg p-[16px] flex flex-col items-center justify-center gap-2 bg-surface hover:bg-surface-container-high transition-colors cursor-pointer group">
-                <div className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
-                  <span className="material-symbols-outlined" data-icon="add_photo_alternate">add_photo_alternate</span>
-                </div>
-                <span className="font-body-md text-[13px] text-on-surface-variant text-center">Click to upload<br/>(Coming Soon)</span>
+              <div 
+                className="border-2 border-dashed border-outline-variant rounded-lg p-[16px] flex flex-col items-center justify-center gap-2 bg-surface hover:bg-surface-container-high transition-colors cursor-pointer group overflow-hidden"
+                onClick={() => featuredImageInputRef.current?.click()}
+              >
+                <input type="file" ref={featuredImageInputRef} style={{ display: 'none' }} onChange={handleFeaturedImageUpload} accept="image/*" />
+                {featuredImage ? (
+                  <img src={featuredImage} alt="Featured" className="w-full h-auto max-h-[150px] object-contain rounded" />
+                ) : (
+                  <>
+                    <div className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
+                      <span className="material-symbols-outlined" data-icon="add_photo_alternate">add_photo_alternate</span>
+                    </div>
+                    <span className="font-body-md text-[13px] text-on-surface-variant text-center">Click to upload</span>
+                  </>
+                )}
               </div>
             </div>
 

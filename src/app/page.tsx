@@ -153,11 +153,11 @@ export default function Home() {
   }
 
   // --- Authenticated Repo Selection ---
-  if (!settings.repository || showSettings) {
+  if (!settings.repository) {
     return (
       <div className="flex h-screen items-center justify-center bg-background p-6">
         <div className="w-full max-w-[600px] bg-surface-container-lowest rounded-xl p-[24px] border border-outline-variant shadow-sm flex flex-col gap-[16px]">
-          <h2 className="font-headline-md text-[24px] text-primary">{showSettings ? "Settings" : "Select Repository"}</h2>
+          <h2 className="font-headline-md text-[24px] text-primary">Select Repository</h2>
           <p className="font-body-md text-on-surface-variant mb-4">Choose the GitHub repository where your Hugo site is hosted.</p>
           
           {loadingRepos ? (
@@ -202,13 +202,7 @@ export default function Home() {
             </div>
           </div>
           
-          {showSettings && (
-            <div className="mt-4 flex justify-end">
-              <button onClick={() => setShowSettings(false)} className="bg-primary text-on-primary font-label-caps text-[12px] uppercase tracking-widest px-6 py-2 rounded-lg hover:opacity-90 transition-opacity">
-                Done
-              </button>
-            </div>
-          )}
+
         </div>
       </div>
     );
@@ -283,8 +277,56 @@ export default function Home() {
         {/* Page Content Canvas */}
         <div className="flex-1 overflow-y-auto p-[24px] lg:p-[48px]">
             <div className="max-w-[1200px] mx-auto">
-                {/* Page Header & Actions */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-[16px] mb-[48px]">
+                {showSettings ? (
+                  <div className="w-full max-w-[600px] bg-surface-container-lowest rounded-xl p-[24px] border border-outline-variant shadow-sm flex flex-col gap-[16px]">
+                    <h2 className="font-headline-md text-[24px] text-primary">Settings</h2>
+                    <p className="font-body-md text-on-surface-variant mb-4">Choose the GitHub repository where your Hugo site is hosted.</p>
+                    
+                    {loadingRepos ? (
+                      <div className="flex justify-center py-8 text-on-surface-variant">Loading your repositories...</div>
+                    ) : (
+                      <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 mb-4">
+                        {repos.map((repo) => (
+                          <button
+                            key={repo.id}
+                            className={`flex justify-between items-center p-4 rounded-lg border transition-all text-left ${settings.repository === repo.full_name ? 'border-primary bg-surface-container-low' : 'border-outline-variant hover:border-primary/50'}`}
+                            onClick={() => {
+                              updateSettings({ repository: repo.full_name });
+                            }}
+                          >
+                            <span className="font-body-md font-medium text-on-surface">{repo.full_name}</span>
+                            {settings.repository === repo.full_name && <Check size={18} className="text-primary" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="border-t border-outline-variant pt-6 mt-2 flex flex-col gap-[16px]">
+                      <h3 className="font-headline-md text-[18px] text-primary">Advanced Configuration</h3>
+                      <div className="flex flex-col gap-1">
+                        <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Content Path</label>
+                        <input 
+                          type="text" 
+                          value={settings.contentPath}
+                          onChange={(e) => updateSettings({ contentPath: e.target.value })}
+                          className="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 font-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary outline-none transition-all"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Image Path</label>
+                        <input 
+                          type="text" 
+                          value={settings.imagePath}
+                          onChange={(e) => updateSettings({ imagePath: e.target.value })}
+                          className="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 font-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary outline-none transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Page Header & Actions */}
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-[16px] mb-[48px]">
                     <div>
                         <h2 className="font-headline-xl text-[36px] font-bold text-on-surface mb-2">Posts</h2>
                         <p className="text-on-surface-variant font-body-md text-[15px]">Manage your blog content in <strong className="text-primary">{settings.repository}</strong>.</p>
@@ -371,6 +413,8 @@ export default function Home() {
                       </button>
                   </div>
                 )}
+                </>
+              )}
             </div>
         </div>
       </main>

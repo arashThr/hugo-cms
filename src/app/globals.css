@@ -9,6 +9,14 @@
   .material-symbols-outlined[data-weight="fill"] {
     font-variation-settings: 'FILL' 1;
   }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
 
 /* Custom scrollbar for IDE feel */
