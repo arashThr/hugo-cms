@@ -16,10 +16,8 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            set -e
+            set -x
             cd $HOME/repos/hugo-cms
-            
-            # Pull the latest code
             git pull origin main
-            
-            # Rebuild and restart the container with zero downtime
             docker compose up -d --build
