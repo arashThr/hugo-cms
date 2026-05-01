@@ -23,6 +23,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className="light">
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+        <script defer src="https://cloud.umami.is/script.js" data-website-id="c3c191eb-fea1-4a59-88cc-2bdfb8f28131"></script>
       </head>
       <body className={`${inter.variable} ${manrope.variable} ${literata.variable} ${nunitoSans.variable} bg-background text-on-background font-body-md text-body-md antialiased min-h-screen flex flex-col`}>
         <AuthProvider>
