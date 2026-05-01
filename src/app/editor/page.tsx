@@ -35,6 +35,8 @@ function EditorForm() {
   const featuredImageInputRef = useRef<HTMLInputElement>(null);
   const [featuredImage, setFeaturedImage] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [pendingImage, setPendingImage] = useState<{ file: File, type: 'inline' | 'featured' } | null>(null);
+  const [compressing, setCompressing] = useState(false);
 
   const editor = useEditor({
     extensions: [
@@ -162,55 +164,90 @@ function EditorForm() {
     setViewMode(mode);
   };
 
+  const resizeImage = (file: File, maxWidth: number): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new window.Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/webp', 0.8));
+          } else {
+            resolve(e.target?.result as string); // fallback
+          }
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const base64 = event.target?.result as string;
-        
-        const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-        const imageMarkdownPath = `/${settings.imagePath.replace(/^static\//, '')}/${filename}`.replace(/\/\//g, '/');
-        
-        setImages(prev => {
-          const newImages = [...prev, { name: filename, base64, markdownPath: imageMarkdownPath }];
-          
-          if (viewMode === 'rich' && editor) {
-            editor.chain().focus().setImage({ src: base64, alt: filename }).run();
-          } else {
-            const imageMarkdownString = `\n![${filename}](${imageMarkdownPath})\n`;
-            if (textareaRef.current) {
-              const textarea = textareaRef.current;
-              const start = textarea.selectionStart;
-              const end = textarea.selectionEnd;
-              
-              const newMarkdown = markdown.substring(0, start) + imageMarkdownString + markdown.substring(end);
-              setMarkdown(newMarkdown);
-              
-              setTimeout(() => {
-                textarea.focus();
-                textarea.setSelectionRange(start + imageMarkdownString.length, start + imageMarkdownString.length);
-              }, 0);
-            } else {
-              setMarkdown(prevMd => prevMd + imageMarkdownString);
-            }
-          }
-          return newImages;
-        });
-      };
-      reader.readAsDataURL(file);
-    }
+    if (file) setPendingImage({ file, type: 'inline' });
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
   const handleFeaturedImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const base64 = event.target?.result as string;
-        setFeaturedImage(base64);
-      };
-      reader.readAsDataURL(file);
+    if (file) setPendingImage({ file, type: 'featured' });
+    if (featuredImageInputRef.current) featuredImageInputRef.current.value = '';
+  };
+
+  const confirmImageUpload = async (maxWidth: number) => {
+    if (!pendingImage) return;
+    setCompressing(true);
+    const { file, type } = pendingImage;
+    const base64 = await resizeImage(file, maxWidth);
+    
+    if (type === 'featured') {
+      setFeaturedImage(base64);
+    } else {
+      const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const imageMarkdownPath = `/${settings.imagePath.replace(/^static\//, '')}/${filename}`.replace(/\/\//g, '/');
+      
+      setImages(prev => {
+        const newImages = [...prev, { name: filename, base64, markdownPath: imageMarkdownPath }];
+        
+        if (viewMode === 'rich' && editor) {
+          editor.chain().focus().setImage({ src: base64, alt: filename }).run();
+        } else {
+          const imageMarkdownString = `\n![${filename}](${imageMarkdownPath})\n`;
+          if (textareaRef.current) {
+            const textarea = textareaRef.current;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            
+            const newMarkdown = markdown.substring(0, start) + imageMarkdownString + markdown.substring(end);
+            setMarkdown(newMarkdown);
+            
+            setTimeout(() => {
+              textarea.focus();
+              textarea.setSelectionRange(start + imageMarkdownString.length, start + imageMarkdownString.length);
+            }, 0);
+          } else {
+            setMarkdown(prevMd => prevMd + imageMarkdownString);
+          }
+        }
+        return newImages;
+      });
     }
+    setPendingImage(null);
+    setCompressing(false);
   };
 
   const publish = async () => {
@@ -470,6 +507,37 @@ function EditorForm() {
           </div>
         </aside>
       </main>
+
+      {/* Image Size Selection Modal */}
+      {pendingImage && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-container-lowest rounded-xl p-[24px] max-w-sm w-full border border-outline-variant shadow-xl flex flex-col gap-[16px]">
+            <h3 className="font-headline-md text-[20px] text-primary">Select Image Size</h3>
+            <p className="font-body-md text-[14px] text-on-surface-variant">
+              Choose an optimized size for your image before uploading.
+            </p>
+            <div className="flex flex-col gap-2 mt-2">
+              <button onClick={() => confirmImageUpload(300)} disabled={compressing} className="w-full text-left px-4 py-3 border border-outline-variant rounded-lg hover:bg-surface-container transition-colors flex justify-between items-center group disabled:opacity-50">
+                <span className="font-body-md font-medium text-on-surface">Small</span>
+                <span className="font-mono text-[12px] text-on-surface-variant group-hover:text-primary transition-colors">Max 300px</span>
+              </button>
+              <button onClick={() => confirmImageUpload(600)} disabled={compressing} className="w-full text-left px-4 py-3 border border-outline-variant rounded-lg hover:bg-surface-container transition-colors flex justify-between items-center group disabled:opacity-50">
+                <span className="font-body-md font-medium text-on-surface">Medium</span>
+                <span className="font-mono text-[12px] text-on-surface-variant group-hover:text-primary transition-colors">Max 600px</span>
+              </button>
+              <button onClick={() => confirmImageUpload(960)} disabled={compressing} className="w-full text-left px-4 py-3 border border-outline-variant rounded-lg hover:bg-surface-container transition-colors flex justify-between items-center group disabled:opacity-50">
+                <span className="font-body-md font-medium text-on-surface">Large</span>
+                <span className="font-mono text-[12px] text-on-surface-variant group-hover:text-primary transition-colors">Max 960px</span>
+              </button>
+            </div>
+            <div className="flex justify-end mt-2">
+              <button onClick={() => setPendingImage(null)} disabled={compressing} className="font-label-caps text-[12px] uppercase tracking-widest px-4 py-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors disabled:opacity-50">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
