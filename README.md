@@ -58,3 +58,5 @@ your-domain.com {
 ```
 
 Reload Caddy (`caddy reload`), and your application will be securely available over HTTPS!
+
++++
