@@ -32,6 +32,14 @@ function EditorForm() {
   const [fetching, setFetching] = useState(false);
   const [viewMode, setViewMode] = useState<'markdown' | 'rich'>('rich');
 
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [initializedPath, setInitializedPath] = useState<string | null | undefined>(undefined);
+
+  const imagesRef = useRef(images);
+  useEffect(() => { imagesRef.current = images; }, [images]);
+  const settingsRef = useRef(settings);
+  useEffect(() => { settingsRef.current = settings; }, [settings]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const featuredImageInputRef = useRef<HTMLInputElement>(null);
   const [featuredImage, setFeaturedImage] = useState<string | null>(null);
@@ -55,6 +63,13 @@ function EditorForm() {
         class: "font-body-lg text-[18px] text-on-surface min-h-[600px] outline-none leading-relaxed",
       },
     },
+    onUpdate: ({ editor }) => {
+      if (viewMode === 'rich') {
+        // @ts-ignore
+        const rawMd = editor.storage.markdown.getMarkdown();
+        setMarkdown(processMarkdownForSave(rawMd, imagesRef.current, settingsRef.current.repository));
+      }
+    }
   });
 
   const processMarkdownForEditor = (md: string, currentImages: typeof images) => {
@@ -76,10 +91,11 @@ function EditorForm() {
     return processed;
   };
 
-  const processMarkdownForSave = (md: string, currentImages: typeof images) => {
-    if (!settings.repository) return md;
+  const processMarkdownForSave = (md: string, currentImages: typeof images, repo?: string) => {
+    const repository = repo || settings.repository;
+    if (!repository) return md;
     let processed = md;
-    const [owner, repo] = settings.repository.split("/");
+    const [owner, project] = repository.split("/");
 
     const githubPrefix = `https://raw.githubusercontent.com/${owner}/${repo}/main/static`;
     processed = processed.split(githubPrefix).join('');
@@ -97,8 +113,22 @@ function EditorForm() {
     }
   }, [isLoaded, settings.repository, router]);
 
+  const resetToEmpty = () => {
+    setTitle('');
+    setDate(new Date().toISOString().slice(0, 16));
+    setTags('');
+    setSlug('');
+    setLayout('Single Post (Default)');
+    setMarkdown('');
+    setImages([]);
+    editor?.commands.setContent('');
+  };
+
   useEffect(() => {
-    if (editPath && settings.repository && !fetching && editor && markdown === '') {
+    if (!editor || !settings.repository || fetching) return;
+    if (initializedPath === editPath) return;
+
+    if (editPath) {
       const fetchPost = async () => {
         setFetching(true);
         const [owner, repo] = settings.repository.split("/");
@@ -128,19 +158,18 @@ function EditorForm() {
                 setTags(rawTags);
               }
 
-              // Set Slug based on filename if editing
               const filename = editPath.split("/").pop()?.replace('.md', '');
               if (filename) setSlug(filename);
 
               const cleanMd = md.replace(/^\s+/, '');
               setMarkdown(cleanMd);
               if (viewMode === 'rich') {
-                editor.commands.setContent(processMarkdownForEditor(cleanMd, images));
+                editor.commands.setContent(processMarkdownForEditor(cleanMd, imagesRef.current));
               }
             } else {
               setMarkdown(content);
               if (viewMode === 'rich') {
-                editor.commands.setContent(processMarkdownForEditor(content, images));
+                editor.commands.setContent(processMarkdownForEditor(content, imagesRef.current));
               }
             }
           }
@@ -148,12 +177,78 @@ function EditorForm() {
           console.error("Failed to fetch post", e);
         } finally {
           setFetching(false);
+          setInitializedPath(editPath);
         }
       };
 
       fetchPost();
+    } else {
+      // New post initialization
+      const draftStr = localStorage.getItem('hugo_draft');
+      if (draftStr) {
+        try {
+          const draft = JSON.parse(draftStr);
+          if (window.confirm("You have an unsaved draft. Do you want to restore it?")) {
+            setTitle(draft.title || '');
+            setDate(draft.date || new Date().toISOString().slice(0, 16));
+            setTags(draft.tags || '');
+            setSlug(draft.slug || '');
+            setLayout(draft.layout || 'Single Post (Default)');
+            setMarkdown(draft.markdown || '');
+            setImages(draft.images || []);
+            editor.commands.setContent(processMarkdownForEditor(draft.markdown || '', draft.images || []));
+          } else {
+            localStorage.removeItem('hugo_draft');
+            resetToEmpty();
+          }
+        } catch (e) {
+          localStorage.removeItem('hugo_draft');
+          resetToEmpty();
+        }
+      } else {
+        resetToEmpty();
+      }
+      setInitializedPath(editPath);
     }
-  }, [editPath, settings.repository, editor]);
+  }, [editPath, settings.repository, editor, initializedPath, fetching]);
+
+  useEffect(() => {
+    if (editPath === null && initializedPath === null) {
+      const hasChanges = title || markdown || tags || slug;
+      if (hasChanges) {
+        const draft = { title, date, tags, slug, layout, markdown, images };
+        localStorage.setItem('hugo_draft', JSON.stringify(draft));
+      }
+    }
+  }, [title, date, tags, slug, layout, markdown, images, editPath, initializedPath]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const hasChanges = title || markdown || tags || slug;
+      if (hasChanges && !publishing) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [title, markdown, tags, slug, publishing]);
+
+  const handleCancel = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const hasChanges = title || markdown || tags || slug;
+    if (hasChanges && !publishing) {
+      if (!editPath) {
+        setShowCancelModal(true);
+      } else {
+        if (window.confirm("You have unsaved changes. Are you sure you want to leave?")) {
+          router.push('/');
+        }
+      }
+    } else {
+      router.push('/');
+    }
+  };
 
   const toggleView = (mode: 'markdown' | 'rich') => {
     if (mode === viewMode) return;
@@ -279,6 +374,9 @@ function EditorForm() {
 
       const data = await res.json();
       if (data.success) {
+        if (!editPath) {
+           localStorage.removeItem('hugo_draft');
+        }
         router.push('/');
       } else {
         alert("Failed to publish: " + data.error);
@@ -297,9 +395,9 @@ function EditorForm() {
       {/* Transactional Top Bar */}
       <header className="flex justify-between items-center h-16 px-4 md:px-6 border-b border-outline-variant bg-surface-container-lowest shrink-0 z-10 gap-2 overflow-hidden">
         <div className="flex items-center gap-2 md:gap-4 min-w-0">
-          <Link href="/" className="text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center shrink-0">
+          <button onClick={handleCancel} className="text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
-          </Link>
+          </button>
           <div className="h-4 w-[1px] bg-outline-variant shrink-0"></div>
           <div className="font-body-md text-[15px] text-on-surface-variant flex items-center gap-1 min-w-0">
             <span className="hidden md:inline shrink-0">{editPath ? 'Editing:' : 'New:'}</span>
@@ -317,9 +415,9 @@ function EditorForm() {
 
           <div className="hidden md:block h-6 w-[1px] bg-outline-variant mx-1"></div>
 
-          <Link href="/" className="hidden md:block font-body-md text-[15px] text-on-surface-variant hover:bg-surface-container px-4 py-2 rounded-lg transition-colors">
+          <button onClick={handleCancel} className="hidden md:block font-body-md text-[15px] text-on-surface-variant hover:bg-surface-container px-4 py-2 rounded-lg transition-colors">
             Cancel
-          </Link>
+          </button>
 
           <button
             onClick={publish}
@@ -554,6 +652,45 @@ function EditorForm() {
             <div className="flex justify-end mt-2">
               <button onClick={() => setPendingImage(null)} disabled={compressing} className="font-label-caps text-[12px] uppercase tracking-widest px-4 py-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors disabled:opacity-50">
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Draft Cancel Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-container-lowest rounded-xl p-[24px] max-w-md w-full border border-outline-variant shadow-xl flex flex-col gap-[16px]">
+            <h3 className="font-headline-md text-[20px] text-primary">Unsaved Draft</h3>
+            <p className="font-body-md text-[14px] text-on-surface-variant">
+              You have an unsaved draft. Do you want to keep it for later or clean it before leaving?
+            </p>
+            <div className="flex flex-col gap-2 mt-4">
+              <button 
+                onClick={() => {
+                  setShowCancelModal(false);
+                  router.push('/');
+                }}
+                className="w-full text-left px-4 py-3 border border-outline-variant rounded-lg hover:bg-surface-container transition-colors font-body-md font-medium text-on-surface"
+              >
+                Keep Draft and Leave
+              </button>
+              <button 
+                onClick={() => {
+                  localStorage.removeItem('hugo_draft');
+                  setShowCancelModal(false);
+                  router.push('/');
+                }}
+                className="w-full text-left px-4 py-3 border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 transition-colors font-body-md font-medium"
+              >
+                Clean Draft and Leave
+              </button>
+              <button 
+                onClick={() => setShowCancelModal(false)}
+                className="w-full text-center px-4 py-3 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors font-body-md mt-2"
+              >
+                Stay on Page
               </button>
             </div>
           </div>
