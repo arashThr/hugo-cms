@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, signIn } from "next-auth/react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import { useSettings } from "@/components/SettingsProvider";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -23,9 +23,13 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    if (session && !settings.repository) {
+    if (session) {
       fetchRepos();
-    } else if (session && settings.repository) {
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (session && settings.repository) {
       fetchTree();
     }
   }, [session, settings.repository]);
@@ -242,22 +246,27 @@ export default function Home() {
         
         {/* Main Navigation */}
         <div className="flex-1 space-y-1">
-            <button onClick={() => setShowSettings(false)} className="w-full flex items-center gap-3 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-md px-3 py-2 shadow-sm border border-slate-200 dark:border-slate-800 transition-all">
+            <button onClick={() => setShowSettings(false)} className={`w-full flex items-center gap-3 rounded-md px-3 py-2 transition-all ${!showSettings ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-slate-800' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'}`}>
                 <span className="material-symbols-outlined" data-icon="article">article</span>
                 Content
             </button>
-            <button onClick={() => setShowSettings(true)} className="w-full flex items-center gap-3 text-slate-500 dark:text-slate-400 px-3 py-2 hover:text-slate-900 dark:hover:text-white transition-all">
+            <button onClick={() => setShowSettings(true)} className={`w-full flex items-center gap-3 rounded-md px-3 py-2 transition-all ${showSettings ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-slate-800' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'}`}>
                 <span className="material-symbols-outlined" data-icon="settings">settings</span>
                 Config
             </button>
         </div>
         
         {/* User Info */}
-        <div className="mt-auto pt-4 border-t border-outline-variant flex items-center gap-3 px-2">
-            {session.user?.image && <img src={session.user.image} alt="User" className="w-8 h-8 rounded-full border border-outline-variant object-cover" />}
-            <div className="flex flex-col overflow-hidden">
-               <span className="text-[11px] font-bold truncate text-slate-900 dark:text-white">{session.user?.name}</span>
+        <div className="mt-auto pt-4 border-t border-outline-variant flex items-center justify-between gap-3 px-2">
+            <div className="flex items-center gap-3 overflow-hidden">
+                {session.user?.image && <img src={session.user.image} alt="User" className="w-8 h-8 rounded-full border border-outline-variant object-cover shrink-0" />}
+                <div className="flex flex-col overflow-hidden">
+                   <span className="text-[11px] font-bold truncate text-slate-900 dark:text-white">{session.user?.name}</span>
+                </div>
             </div>
+            <button onClick={() => signOut()} className="text-slate-500 hover:text-slate-900 dark:hover:text-white p-1 rounded transition-colors" title="Sign Out">
+                <span className="material-symbols-outlined text-[18px]">logout</span>
+            </button>
         </div>
       </nav>
 
@@ -270,7 +279,12 @@ export default function Home() {
                 <button onClick={() => setShowSettings(true)} className="hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded-full">
                     <span className="material-symbols-outlined">settings</span>
                 </button>
-                {session.user?.image && <img src={session.user.image} alt="User" className="w-8 h-8 rounded-full" />}
+                <div className="flex items-center gap-2">
+                    {session.user?.image && <img src={session.user.image} alt="User" className="w-8 h-8 rounded-full" />}
+                    <button onClick={() => signOut()} className="text-slate-500 hover:text-slate-900 dark:hover:text-white p-1 rounded transition-colors" title="Sign Out">
+                        <span className="material-symbols-outlined text-[18px]">logout</span>
+                    </button>
+                </div>
             </div>
         </header>
 
