@@ -3,6 +3,7 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
+import LinkExtension from '@tiptap/extension-link';
 import { Markdown } from 'tiptap-markdown';
 import { useState, useRef, useEffect, Suspense } from 'react';
 import { useSettings } from '@/components/SettingsProvider';
@@ -43,12 +44,15 @@ function EditorForm() {
       StarterKit,
       Image,
       Markdown,
+      LinkExtension.configure({
+        openOnClick: false,
+      }),
     ],
     content: '',
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class: "font-body-lg text-[18px] text-on-surface min-h-[600px] outline-none leading-relaxed prose prose-slate max-w-none",
+        class: "font-body-lg text-[18px] text-on-surface min-h-[600px] outline-none leading-relaxed",
       },
     },
   });
@@ -336,7 +340,7 @@ function EditorForm() {
           <div className="w-[800px] max-w-full px-[24px] flex flex-col gap-[24px] pb-[48px]">
             {/* Document Title */}
             <input
-              className="font-headline-xl text-[36px] font-bold text-on-surface bg-transparent border-none focus:ring-0 p-0 placeholder:text-outline-variant w-full outline-none"
+              className="shrink-0 font-headline-xl text-[36px] font-bold text-on-surface bg-transparent border-none focus:ring-0 p-0 placeholder:text-outline-variant w-full outline-none"
               placeholder="Post Title"
               type="text"
               value={title}
@@ -345,7 +349,7 @@ function EditorForm() {
             />
 
             {/* IDE-Style Toolbar */}
-            <div className="sticky top-0 z-20 flex items-center p-1 border border-outline-variant rounded-lg bg-surface-container-lowest/90 backdrop-blur-sm shadow-sm transition-all overflow-x-auto lg:overflow-visible gap-2 hide-scrollbar">
+            <div className="shrink-0 sticky top-0 z-20 w-full flex items-center p-1 border border-outline-variant rounded-lg bg-surface-container-lowest/90 backdrop-blur-sm shadow-sm transition-all overflow-x-auto gap-2 hide-scrollbar">
               {/* Formatting Tools */}
               <div className="flex items-center gap-1 shrink-0">
                 {viewMode === 'rich' ? (

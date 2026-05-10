@@ -13,6 +13,7 @@
     "@octokit/rest": "^22.0.1",
     "@tailwindcss/typography": "^0.5.19",
     "@tiptap/extension-image": "^3.22.5",
+    "@tiptap/extension-link": "3.22.5",
     "@tiptap/react": "^3.22.5",
     "@tiptap/starter-kit": "^3.22.5",
     "lucide-react": "^1.14.0",
