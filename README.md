@@ -24,6 +24,21 @@ npm install
 npm run dev
 ```
 
+## Production Deployment (Standard Node.js)
+
+If you are not using Docker, you can run the application directly using Node.js:
+
+1. Ensure your `.env.local` is configured with your production keys and URL.
+2. Build the optimized production bundle:
+```bash
+npm run build
+```
+3. Start the production server:
+```bash
+npm start
+```
+The application will be running on `http://localhost:3000`.
+
 ## Production Deployment (Docker + Caddy)
 
 This application is ready to be deployed using Docker and Docker Compose. It leverages Next.js standalone output for a highly optimized, minimal container size.
