@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { repository, contentPath, imagePath, title, date, tags, markdown, images } = body;
+    const { repository, contentPath, imagePath, title, slug: customSlug, layout, date, tags, markdown, images, featuredImage } = body;
 
     if (!repository || !title || !markdown) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -21,28 +21,46 @@ export async function POST(request: NextRequest) {
 
     const [owner, repo] = repository.split("/");
 
+    // 2. Prepare files array
+    const resolvedSlug = customSlug || title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
+    const filename = `${resolvedSlug}.md`;
+    const fullPostPath = `${contentPath.replace(/\/$/, "")}/${filename}`;
+
+    const filesToCommit: { path: string; content: string; encoding: "utf-8" | "base64" }[] = [];
+
+    // Process featured image if exists
+    let frontmatterImage = "";
+    if (featuredImage && featuredImage.startsWith("data:image")) {
+       const imgFilename = `featured-${Date.now()}.webp`;
+       const base64Data = featuredImage.split(",")[1];
+       filesToCommit.push({
+         path: `${imagePath.replace(/\/$/, "")}/${imgFilename}`,
+         content: base64Data,
+         encoding: "base64"
+       });
+       frontmatterImage = `/${imagePath.replace(/^static\//, "")}/${imgFilename}`.replace(/\/\//g, "/");
+    } else if (featuredImage) {
+       // If it's just a URL string (from an existing post)
+       frontmatterImage = featuredImage;
+    }
+
     // 1. Generate Frontmatter
     const frontmatterObj = {
       title,
       date: new Date(date).toISOString(),
-      tags: tags.split(",").map((t: string) => t.trim()).filter(Boolean),
+      ...(layout && layout !== 'Single Post (Default)' ? { layout } : {}),
+      tags: tags ? tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [],
+      ...(frontmatterImage && { image: frontmatterImage })
     };
 
     const tomlString = toml.stringify(frontmatterObj as any);
     const fileContent = `+++\n${tomlString}+++\n\n${markdown}`;
 
-    // 2. Prepare files array
-    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
-    const filename = `${slug}.md`;
-    const fullPostPath = `${contentPath.replace(/\/$/, "")}/${filename}`;
-
-    const filesToCommit: { path: string; content: string; encoding: "utf-8" | "base64" }[] = [
-      {
-        path: fullPostPath,
-        content: fileContent,
-        encoding: "utf-8",
-      },
-    ];
+    filesToCommit.push({
+      path: fullPostPath,
+      content: fileContent,
+      encoding: "utf-8",
+    });
 
     // 3. Add images
     if (images && images.length > 0) {

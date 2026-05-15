@@ -1,6 +1,7 @@
 "use client";
 
 import { useEditor, EditorContent } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import LinkExtension from '@tiptap/extension-link';
@@ -33,6 +34,7 @@ function EditorForm() {
   const [viewMode, setViewMode] = useState<'markdown' | 'rich'>('rich');
 
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true);
   const [initializedPath, setInitializedPath] = useState<string | null | undefined>(undefined);
 
   const imagesRef = useRef(images);
@@ -158,6 +160,12 @@ function EditorForm() {
                 setTags(rawTags);
               }
 
+              const layoutMatch = fm.match(/layout\s*[:=]\s*["']?(.*?)["']?(?:\r?\n|$)/i);
+              if (layoutMatch) setLayout(layoutMatch[1]);
+
+              const imageMatch = fm.match(/image\s*[:=]\s*["']?(.*?)["']?(?:\r?\n|$)/i);
+              if (imageMatch) setFeaturedImage(imageMatch[1]);
+
               const filename = editPath.split("/").pop()?.replace('.md', '');
               if (filename) setSlug(filename);
 
@@ -194,6 +202,7 @@ function EditorForm() {
             setTags(draft.tags || '');
             setSlug(draft.slug || '');
             setLayout(draft.layout || 'Single Post (Default)');
+            setFeaturedImage(draft.featuredImage || null);
             setMarkdown(draft.markdown || '');
             setImages(draft.images || []);
             editor.commands.setContent(processMarkdownForEditor(draft.markdown || '', draft.images || []));
@@ -216,11 +225,11 @@ function EditorForm() {
     if (editPath === null && initializedPath === null) {
       const hasChanges = title || markdown || tags || slug;
       if (hasChanges) {
-        const draft = { title, date, tags, slug, layout, markdown, images };
+        const draft = { title, date, tags, slug, layout, markdown, images, featuredImage };
         localStorage.setItem('hugo_draft', JSON.stringify(draft));
       }
     }
-  }, [title, date, tags, slug, layout, markdown, images, editPath, initializedPath]);
+  }, [title, date, tags, slug, layout, markdown, images, featuredImage, editPath, initializedPath]);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -365,17 +374,20 @@ function EditorForm() {
           contentPath: settings.contentPath,
           imagePath: settings.imagePath,
           title,
+          slug,
+          layout,
           date,
           tags,
           markdown: finalMarkdown,
-          images
+          images,
+          featuredImage
         })
       });
 
       const data = await res.json();
       if (data.success) {
         if (!editPath) {
-           localStorage.removeItem('hugo_draft');
+          localStorage.removeItem('hugo_draft');
         }
         router.push('/');
       } else {
@@ -516,13 +528,48 @@ function EditorForm() {
                 prose-p:text-base
                 prose-a:text-blue-600 hover:prose-a:text-blue-500
                 prose-blockquote:border-l-4 prose-blockquote:pl-4 prose-blockquote:text-gray-500
-                prose-code:bg-gray-100 prose-code:px-1 prose-code:rounded
-                prose-pre:bg-gray-900 prose-pre:text-gray-100
+                prose-code:bg-surface-container-high prose-code:px-1 prose-code:rounded
+                prose-pre:bg-surface-container-highest prose-pre:text-on-surface
                 [&_.ProseMirror]:min-h-[500px]
                 [&_.ProseMirror]:outline-none
                 overflow-y-auto
                 hide-scrollbar
               ">
+                {editor && (
+                  <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }} shouldShow={({ editor }) => editor.isActive('image') || editor.isActive('link')}>
+                    <div className="flex items-center bg-surface-container shadow-md rounded-md overflow-hidden border border-outline-variant text-on-surface text-[13px] font-body-md p-1 gap-1">
+                      {editor.isActive('link') && (
+                        <>
+                          <button onClick={() => {
+                            const currentHref = editor.getAttributes('link').href;
+                            const url = window.prompt('URL', currentHref);
+                            if (url === null) return;
+                            if (url === '') {
+                              editor.chain().focus().extendMarkRange('link').unsetLink().run();
+                              return;
+                            }
+                            editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+                          }} className="px-3 py-1 hover:bg-surface-container-high rounded transition-colors whitespace-nowrap">
+                            Edit Link
+                          </button>
+                          <button onClick={() => editor.chain().focus().unsetLink().run()} className="px-3 py-1 hover:bg-surface-container-high rounded transition-colors text-red-600 whitespace-nowrap">
+                            Remove Link
+                          </button>
+                        </>
+                      )}
+                      {editor.isActive('image') && (
+                        <>
+                          <span className="px-2 text-on-surface-variant text-[11px] font-label-caps tracking-widest uppercase">Size:</span>
+                          <button onClick={() => editor.chain().focus().updateAttributes('image', { src: editor.getAttributes('image').src.split('#')[0] + '#small' }).run()} className={`px-2 py-1 rounded transition-colors whitespace-nowrap ${editor.getAttributes('image').src?.endsWith('#small') ? 'bg-surface-variant' : 'hover:bg-surface-container-high'}`}>Small</button>
+                          <button onClick={() => editor.chain().focus().updateAttributes('image', { src: editor.getAttributes('image').src.split('#')[0] + '#medium' }).run()} className={`px-2 py-1 rounded transition-colors whitespace-nowrap ${editor.getAttributes('image').src?.endsWith('#medium') ? 'bg-surface-variant' : 'hover:bg-surface-container-high'}`}>Medium</button>
+                          <button onClick={() => editor.chain().focus().updateAttributes('image', { src: editor.getAttributes('image').src.split('#')[0] + '#large' }).run()} className={`px-2 py-1 rounded transition-colors whitespace-nowrap ${editor.getAttributes('image').src?.endsWith('#large') ? 'bg-surface-variant' : 'hover:bg-surface-container-high'}`}>Large</button>
+                          <div className="w-[1px] h-4 bg-outline-variant mx-1"></div>
+                          <button onClick={() => editor.chain().focus().updateAttributes('image', { src: editor.getAttributes('image').src.split('#')[0] }).run()} className={`px-2 py-1 rounded transition-colors whitespace-nowrap ${!editor.getAttributes('image').src?.includes('#') ? 'bg-surface-variant' : 'hover:bg-surface-container-high'}`}>Original</button>
+                        </>
+                      )}
+                    </div>
+                  </BubbleMenu>
+                )}
                 <EditorContent editor={editor} />
               </div>
             ) : (
@@ -538,92 +585,94 @@ function EditorForm() {
         </section>
 
         {/* Right Sidebar (Front Matter / Metadata) */}
-        <aside className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-outline-variant bg-surface-container-lowest shrink-0 lg:overflow-y-auto flex flex-col shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
+        <aside className={`w-full ${showSidebar ? 'lg:w-80' : 'lg:w-16'} border-t lg:border-t-0 lg:border-l border-outline-variant bg-surface-container-lowest shrink-0 lg:overflow-y-auto flex flex-col shadow-[-4px_0_24px_rgba(0,0,0,0.02)] transition-all overflow-hidden`}>
           <div className="p-[16px] border-b border-outline-variant flex items-center justify-between sticky top-0 bg-surface-container-lowest/95 backdrop-blur z-10">
-            <h2 className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Post Metadata</h2>
-            <button className="text-on-surface-variant hover:text-on-surface"><span className="material-symbols-outlined text-[20px]" data-icon="tune">tune</span></button>
+            {showSidebar && <h2 className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant whitespace-nowrap">Post Metadata</h2>}
+            <button onClick={() => setShowSidebar(!showSidebar)} className={`text-on-surface-variant hover:text-on-surface flex-shrink-0 ${!showSidebar && 'mx-auto'}`}><span className="material-symbols-outlined text-[20px]" data-icon="tune">tune</span></button>
           </div>
 
-          <div className="p-[24px] flex flex-col gap-[24px]">
-            {/* URL Slug */}
-            <div className="flex flex-col gap-1">
-              <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">URL Slug</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-outline font-mono text-[14px]">/posts/</span>
-                <input
-                  className="w-full bg-surface border border-outline-variant rounded-lg py-2 pl-[70px] pr-3 font-mono text-[14px] text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
-                  type="text"
-                  value={slug || title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "")}
-                  onChange={e => setSlug(e.target.value)}
-                  disabled={fetching}
-                />
+          {showSidebar && (
+            <div className="p-[24px] flex flex-col gap-[24px]">
+              {/* URL Slug */}
+              <div className="flex flex-col gap-1">
+                <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">URL Slug</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-outline font-mono text-[14px]">/posts/</span>
+                  <input
+                    className="w-full bg-surface border border-outline-variant rounded-lg py-2 pl-[70px] pr-3 font-mono text-[14px] text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
+                    type="text"
+                    value={slug || title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "")}
+                    onChange={e => setSlug(e.target.value)}
+                    disabled={fetching}
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Publish Date */}
-            <div className="flex flex-col gap-1">
-              <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Publish Date</label>
-              <div className="relative">
+              {/* Publish Date */}
+              <div className="flex flex-col gap-1">
+                <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Publish Date</label>
+                <div className="relative">
+                  <input
+                    className="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 font-body-md text-[15px] text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
+                    type="datetime-local"
+                    value={date}
+                    onChange={e => setDate(e.target.value)}
+                    disabled={fetching}
+                  />
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div className="flex flex-col gap-[8px]">
+                <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Tags (comma separated)</label>
                 <input
                   className="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 font-body-md text-[15px] text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
-                  type="datetime-local"
-                  value={date}
-                  onChange={e => setDate(e.target.value)}
+                  placeholder="e.g. tech, design"
+                  type="text"
+                  value={tags}
+                  onChange={e => setTags(e.target.value)}
                   disabled={fetching}
                 />
               </div>
-            </div>
 
-            {/* Tags */}
-            <div className="flex flex-col gap-[8px]">
-              <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Tags (comma separated)</label>
-              <input
-                className="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 font-body-md text-[15px] text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
-                placeholder="e.g. tech, design"
-                type="text"
-                value={tags}
-                onChange={e => setTags(e.target.value)}
-                disabled={fetching}
-              />
-            </div>
+              <div className="h-[1px] w-full bg-outline-variant my-1"></div>
 
-            <div className="h-[1px] w-full bg-outline-variant my-1"></div>
+              {/* Featured Image */}
+              <div className="flex flex-col gap-[8px]">
+                <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Featured Image</label>
+                <div
+                  className="border-2 border-dashed border-outline-variant rounded-lg p-[16px] flex flex-col items-center justify-center gap-2 bg-surface hover:bg-surface-container-high transition-colors cursor-pointer group overflow-hidden"
+                  onClick={() => featuredImageInputRef.current?.click()}
+                >
+                  <input type="file" ref={featuredImageInputRef} style={{ display: 'none' }} onChange={handleFeaturedImageUpload} accept="image/*" />
+                  {featuredImage ? (
+                    <img src={featuredImage} alt="Featured" className="w-full h-auto max-h-[150px] object-contain rounded" />
+                  ) : (
+                    <>
+                      <div className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
+                        <span className="material-symbols-outlined" data-icon="add_photo_alternate">add_photo_alternate</span>
+                      </div>
+                      <span className="font-body-md text-[13px] text-on-surface-variant text-center">Click to upload</span>
+                    </>
+                  )}
+                </div>
+              </div>
 
-            {/* Featured Image */}
-            <div className="flex flex-col gap-[8px]">
-              <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Featured Image</label>
-              <div
-                className="border-2 border-dashed border-outline-variant rounded-lg p-[16px] flex flex-col items-center justify-center gap-2 bg-surface hover:bg-surface-container-high transition-colors cursor-pointer group overflow-hidden"
-                onClick={() => featuredImageInputRef.current?.click()}
-              >
-                <input type="file" ref={featuredImageInputRef} style={{ display: 'none' }} onChange={handleFeaturedImageUpload} accept="image/*" />
-                {featuredImage ? (
-                  <img src={featuredImage} alt="Featured" className="w-full h-auto max-h-[150px] object-contain rounded" />
-                ) : (
-                  <>
-                    <div className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
-                      <span className="material-symbols-outlined" data-icon="add_photo_alternate">add_photo_alternate</span>
-                    </div>
-                    <span className="font-body-md text-[13px] text-on-surface-variant text-center">Click to upload</span>
-                  </>
-                )}
+              {/* Layout Template */}
+              <div className="flex flex-col gap-1 mt-[8px]">
+                <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Layout Template</label>
+                <select
+                  className="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 font-body-md text-[15px] text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all appearance-none cursor-pointer"
+                  value={layout}
+                  onChange={e => setLayout(e.target.value)}
+                >
+                  <option>Single Post (Default)</option>
+                  <option>Full Width Hero</option>
+                  <option>Documentation Article</option>
+                </select>
               </div>
             </div>
-
-            {/* Layout Template */}
-            <div className="flex flex-col gap-1 mt-[8px]">
-              <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Layout Template</label>
-              <select
-                className="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 font-body-md text-[15px] text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all appearance-none cursor-pointer"
-                value={layout}
-                onChange={e => setLayout(e.target.value)}
-              >
-                <option>Single Post (Default)</option>
-                <option>Full Width Hero</option>
-                <option>Documentation Article</option>
-              </select>
-            </div>
-          </div>
+          )}
         </aside>
       </main>
 
@@ -667,7 +716,7 @@ function EditorForm() {
               You have an unsaved draft. Do you want to keep it for later or clean it before leaving?
             </p>
             <div className="flex flex-col gap-2 mt-4">
-              <button 
+              <button
                 onClick={() => {
                   setShowCancelModal(false);
                   router.push('/');
@@ -676,17 +725,17 @@ function EditorForm() {
               >
                 Keep Draft and Leave
               </button>
-              <button 
+              <button
                 onClick={() => {
                   localStorage.removeItem('hugo_draft');
                   setShowCancelModal(false);
                   router.push('/');
                 }}
-                className="w-full text-left px-4 py-3 border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 transition-colors font-body-md font-medium"
+                className="w-full text-left px-4 py-3 border border-red-200 bg-red-50 rounded-lg hover:bg-red-100 text-red-700 transition-colors font-body-md font-medium"
               >
                 Clean Draft and Leave
               </button>
-              <button 
+              <button
                 onClick={() => setShowCancelModal(false)}
                 className="w-full text-center px-4 py-3 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors font-body-md mt-2"
               >

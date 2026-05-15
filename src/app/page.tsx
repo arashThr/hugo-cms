@@ -293,6 +293,12 @@ export default function Home() {
             <div className="max-w-[1200px] mx-auto">
                 {showSettings ? (
                   <div className="w-full max-w-[600px] bg-surface-container-lowest rounded-xl p-[24px] border border-outline-variant shadow-sm flex flex-col gap-[16px]">
+                    <div className="flex items-center gap-2 mb-2 md:hidden">
+                      <button onClick={() => setShowSettings(false)} className="text-on-surface-variant hover:text-on-surface flex items-center p-1 -ml-1 rounded-full hover:bg-surface-container">
+                        <span className="material-symbols-outlined text-[20px]" data-icon="arrow_back">arrow_back</span>
+                      </button>
+                      <span className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Back to Contents</span>
+                    </div>
                     <h2 className="font-headline-md text-[24px] text-primary">Settings</h2>
                     <p className="font-body-md text-on-surface-variant mb-4">Choose the GitHub repository where your Hugo site is hosted.</p>
                     
@@ -392,22 +398,28 @@ export default function Home() {
                   <div className="bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden">
                       {/* Header Row */}
                       <div className="hidden md:grid grid-cols-12 gap-6 p-4 border-b border-outline-variant bg-surface-container-low font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">
-                          <div className="col-span-12">File Name</div>
+                          <div className="col-span-8">File Name</div>
+                          <div className="col-span-4">Date</div>
                       </div>
                       
                       {/* List Items */}
                       <div className="divide-y divide-outline-variant">
                           {visiblePosts.map((post) => {
                             const filename = post.path.split("/").pop() || post.path;
+                            const dateMatch = filename.match(/\d{4}-\d{2}-\d{2}/);
+                            const dateStr = dateMatch ? dateMatch[0] : "—";
                             return (
                               <div key={post.sha} className="group grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 p-4 items-center hover:bg-surface-bright transition-colors relative">
-                                  <div className="col-span-1 md:col-span-12 flex flex-col gap-1">
+                                  <div className="col-span-1 md:col-span-8 flex flex-col gap-1">
                                       <Link href={`/editor?path=${encodeURIComponent(post.path)}`} className="font-headline-md text-[20px] font-semibold text-on-surface group-hover:text-primary transition-colors before:absolute before:inset-0">
                                         {filename}
                                       </Link>
                                       <div className="flex gap-2 font-mono text-[13px] text-on-surface-variant">
                                           <span>/{post.path}</span>
                                       </div>
+                                  </div>
+                                  <div className="hidden md:block md:col-span-4 font-mono text-[13px] text-on-surface-variant">
+                                      {dateStr}
                                   </div>
                               </div>
                             );
