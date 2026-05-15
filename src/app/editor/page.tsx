@@ -11,7 +11,9 @@ import { useSettings } from '@/components/SettingsProvider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-
+import { EditorSidebar } from '@/components/editor/EditorSidebar';
+import { ImageSizeModal } from '@/components/editor/ImageSizeModal';
+import { DraftCancelModal } from '@/components/editor/DraftCancelModal';
 function EditorForm() {
   const { data: session } = useSession();
   const { settings, isLoaded } = useSettings();
@@ -53,7 +55,6 @@ function EditorForm() {
     extensions: [
       StarterKit,
       Image,
-      Markdown,
       LinkExtension.configure({
         openOnClick: false,
         HTMLAttributes: {
@@ -61,6 +62,7 @@ function EditorForm() {
           rel: null,
         },
       }),
+      Markdown,
     ],
     content: '',
     immediatelyRender: false,
@@ -563,7 +565,7 @@ function EditorForm() {
                 hide-scrollbar
               ">
                 {editor && (
-                  <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }} shouldShow={({ editor }) => editor.isActive('link')}>
+                  <BubbleMenu editor={editor} shouldShow={({ editor }) => editor.isActive('link')}>
                     <div className="flex items-center bg-surface-container shadow-md rounded-md overflow-hidden border border-outline-variant text-on-surface text-[13px] font-body-md p-1 gap-1">
                       {editor.isActive('link') && (
                         <>
@@ -603,166 +605,38 @@ function EditorForm() {
         </section>
 
         {/* Right Sidebar (Front Matter / Metadata) */}
-        <aside className={`w-full ${showSidebar ? 'lg:w-80' : 'lg:w-16'} border-t lg:border-t-0 lg:border-l border-outline-variant bg-surface-container-lowest shrink-0 lg:overflow-y-auto flex flex-col shadow-[-4px_0_24px_rgba(0,0,0,0.02)] transition-all overflow-hidden`}>
-          <div className="p-[16px] border-b border-outline-variant flex items-center justify-between sticky top-0 bg-surface-container-lowest/95 backdrop-blur z-10">
-            {showSidebar && <h2 className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant whitespace-nowrap">Post Metadata</h2>}
-            <button onClick={() => setShowSidebar(!showSidebar)} className={`text-on-surface-variant hover:text-on-surface flex-shrink-0 ${!showSidebar && 'mx-auto'}`}><span className="material-symbols-outlined text-[20px]" data-icon="tune">tune</span></button>
-          </div>
-
-          {showSidebar && (
-            <div className="p-[24px] flex flex-col gap-[24px]">
-              {/* URL Slug */}
-              <div className="flex flex-col gap-1">
-                <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">URL Slug</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-outline font-mono text-[14px]">/posts/</span>
-                  <input
-                    className="w-full bg-surface border border-outline-variant rounded-lg py-2 pl-[70px] pr-3 font-mono text-[14px] text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
-                    type="text"
-                    value={slug || `${date.split('T')[0]}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "")}`}
-                    onChange={e => setSlug(e.target.value)}
-                    disabled={fetching}
-                  />
-                </div>
-              </div>
-
-              {/* Publish Date */}
-              <div className="flex flex-col gap-1">
-                <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Publish Date</label>
-                <div className="relative">
-                  <input
-                    className="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 font-body-md text-[15px] text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
-                    type="datetime-local"
-                    value={date}
-                    onChange={e => setDate(e.target.value)}
-                    disabled={fetching}
-                  />
-                </div>
-              </div>
-
-              {/* Tags */}
-              <div className="flex flex-col gap-[8px]">
-                <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Tags (comma separated)</label>
-                <input
-                  className="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 font-body-md text-[15px] text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
-                  placeholder="e.g. tech, design"
-                  type="text"
-                  value={tags}
-                  onChange={e => setTags(e.target.value)}
-                  disabled={fetching}
-                />
-              </div>
-
-              <div className="h-[1px] w-full bg-outline-variant my-1"></div>
-
-              {/* Featured Image */}
-              <div className="flex flex-col gap-[8px]">
-                <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Featured Image</label>
-                <div
-                  className="border-2 border-dashed border-outline-variant rounded-lg p-[16px] flex flex-col items-center justify-center gap-2 bg-surface hover:bg-surface-container-high transition-colors cursor-pointer group overflow-hidden"
-                  onClick={() => featuredImageInputRef.current?.click()}
-                >
-                  <input type="file" ref={featuredImageInputRef} style={{ display: 'none' }} onChange={handleFeaturedImageUpload} accept="image/*" />
-                  {featuredImage ? (
-                    <img src={featuredImage} alt="Featured" className="w-full h-auto max-h-[150px] object-contain rounded" />
-                  ) : (
-                    <>
-                      <div className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
-                        <span className="material-symbols-outlined" data-icon="add_photo_alternate">add_photo_alternate</span>
-                      </div>
-                      <span className="font-body-md text-[13px] text-on-surface-variant text-center">Click to upload</span>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Layout Template */}
-              <div className="flex flex-col gap-1 mt-[8px]">
-                <label className="font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">Layout Template</label>
-                <select
-                  className="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 font-body-md text-[15px] text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all appearance-none cursor-pointer"
-                  value={layout}
-                  onChange={e => setLayout(e.target.value)}
-                >
-                  <option>Single Post (Default)</option>
-                  <option>Full Width Hero</option>
-                  <option>Documentation Article</option>
-                </select>
-              </div>
-            </div>
-          )}
-        </aside>
+        <EditorSidebar 
+          slug={slug}
+          setSlug={setSlug}
+          title={title}
+          date={date}
+          setDate={setDate}
+          tags={tags}
+          setTags={setTags}
+          featuredImage={featuredImage}
+          handleFeaturedImageUpload={handleFeaturedImageUpload}
+          featuredImageInputRef={featuredImageInputRef}
+          layout={layout}
+          setLayout={setLayout}
+          fetching={fetching}
+          showSidebar={showSidebar}
+          setShowSidebar={setShowSidebar}
+        />
       </main>
 
       {/* Image Size Selection Modal */}
-      {pendingImage && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-surface-container-lowest rounded-xl p-[24px] max-w-sm w-full border border-outline-variant shadow-xl flex flex-col gap-[16px]">
-            <h3 className="font-headline-md text-[20px] text-primary">Select Image Size</h3>
-            <p className="font-body-md text-[14px] text-on-surface-variant">
-              Choose an optimized size for your image before uploading.
-            </p>
-            <div className="flex flex-col gap-2 mt-2">
-              <button onClick={() => confirmImageUpload(300)} disabled={compressing} className="w-full text-left px-4 py-3 border border-outline-variant rounded-lg hover:bg-surface-container transition-colors flex justify-between items-center group disabled:opacity-50">
-                <span className="font-body-md font-medium text-on-surface">Small</span>
-                <span className="font-mono text-[12px] text-on-surface-variant group-hover:text-primary transition-colors">Max 300px</span>
-              </button>
-              <button onClick={() => confirmImageUpload(600)} disabled={compressing} className="w-full text-left px-4 py-3 border border-outline-variant rounded-lg hover:bg-surface-container transition-colors flex justify-between items-center group disabled:opacity-50">
-                <span className="font-body-md font-medium text-on-surface">Medium</span>
-                <span className="font-mono text-[12px] text-on-surface-variant group-hover:text-primary transition-colors">Max 600px</span>
-              </button>
-              <button onClick={() => confirmImageUpload(960)} disabled={compressing} className="w-full text-left px-4 py-3 border border-outline-variant rounded-lg hover:bg-surface-container transition-colors flex justify-between items-center group disabled:opacity-50">
-                <span className="font-body-md font-medium text-on-surface">Large</span>
-                <span className="font-mono text-[12px] text-on-surface-variant group-hover:text-primary transition-colors">Max 960px</span>
-              </button>
-            </div>
-            <div className="flex justify-end mt-2">
-              <button onClick={() => setPendingImage(null)} disabled={compressing} className="font-label-caps text-[12px] uppercase tracking-widest px-4 py-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors disabled:opacity-50">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ImageSizeModal 
+        pendingImage={pendingImage}
+        compressing={compressing}
+        confirmImageUpload={confirmImageUpload}
+        setPendingImage={setPendingImage}
+      />
 
       {/* Draft Cancel Modal */}
-      {showCancelModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-surface-container-lowest rounded-xl p-[24px] max-w-md w-full border border-outline-variant shadow-xl flex flex-col gap-[16px]">
-            <h3 className="font-headline-md text-[20px] text-primary">Unsaved Draft</h3>
-            <p className="font-body-md text-[14px] text-on-surface-variant">
-              You have an unsaved draft. Do you want to keep it for later or clean it before leaving?
-            </p>
-            <div className="flex flex-col gap-2 mt-4">
-              <button
-                onClick={() => {
-                  setShowCancelModal(false);
-                  router.push('/');
-                }}
-                className="w-full text-left px-4 py-3 border border-outline-variant rounded-lg hover:bg-surface-container transition-colors font-body-md font-medium text-on-surface"
-              >
-                Keep Draft and Leave
-              </button>
-              <button
-                onClick={() => {
-                  localStorage.removeItem('hugo_draft');
-                  setShowCancelModal(false);
-                  router.push('/');
-                }}
-                className="w-full text-left px-4 py-3 border border-red-200 bg-red-50 rounded-lg hover:bg-red-100 text-red-700 transition-colors font-body-md font-medium"
-              >
-                Clean Draft and Leave
-              </button>
-              <button
-                onClick={() => setShowCancelModal(false)}
-                className="w-full text-center px-4 py-3 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors font-body-md mt-2"
-              >
-                Stay on Page
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DraftCancelModal 
+        showCancelModal={showCancelModal}
+        setShowCancelModal={setShowCancelModal}
+      />
     </div>
   );
 }
