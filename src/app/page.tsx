@@ -398,7 +398,7 @@ export default function Home() {
                   <div className="bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden">
                       {/* Header Row */}
                       <div className="hidden md:grid grid-cols-12 gap-6 p-4 border-b border-outline-variant bg-surface-container-low font-label-caps text-[12px] uppercase tracking-widest text-on-surface-variant">
-                          <div className="col-span-8">File Name</div>
+                          <div className="col-span-8">Post Title</div>
                           <div className="col-span-4">Date</div>
                       </div>
                       
@@ -414,9 +414,6 @@ export default function Home() {
                                       <Link href={`/editor?path=${encodeURIComponent(post.path)}`} className="font-headline-md text-[20px] font-semibold text-on-surface group-hover:text-primary transition-colors before:absolute before:inset-0">
                                         {filename}
                                       </Link>
-                                      <div className="flex gap-2 font-mono text-[13px] text-on-surface-variant">
-                                          <span>/{post.path}</span>
-                                      </div>
                                   </div>
                                   <div className="hidden md:block md:col-span-4 font-mono text-[13px] text-on-surface-variant">
                                       {dateStr}

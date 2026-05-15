@@ -56,6 +56,10 @@ function EditorForm() {
       Markdown,
       LinkExtension.configure({
         openOnClick: false,
+        HTMLAttributes: {
+          target: null,
+          rel: null,
+        },
       }),
     ],
     content: '',
@@ -64,6 +68,17 @@ function EditorForm() {
       attributes: {
         class: "font-body-lg text-[18px] text-on-surface min-h-[600px] outline-none leading-relaxed",
       },
+      handleClick: (view, pos, event) => {
+        let el = event.target as HTMLElement;
+        while (el && el !== view.dom) {
+          if (el.tagName === 'A') {
+            event.preventDefault();
+            return false;
+          }
+          el = el.parentElement as HTMLElement;
+        }
+        return false;
+      }
     },
     onUpdate: ({ editor }) => {
       if (viewMode === 'rich') {
@@ -243,6 +258,18 @@ function EditorForm() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [title, markdown, tags, slug, publishing]);
 
+  // Prevent default link clicks within the editor natively
+  useEffect(() => {
+    const handleLinkClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.ProseMirror a')) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener('click', handleLinkClick, { capture: true });
+    return () => document.removeEventListener('click', handleLinkClick, { capture: true });
+  }, []);
+
   const handleCancel = (e: React.MouseEvent) => {
     e.preventDefault();
     const hasChanges = title || markdown || tags || slug;
@@ -374,7 +401,7 @@ function EditorForm() {
           contentPath: settings.contentPath,
           imagePath: settings.imagePath,
           title,
-          slug,
+          slug: slug || `${date.split('T')[0]}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "")}`,
           layout,
           date,
           tags,
@@ -536,7 +563,7 @@ function EditorForm() {
                 hide-scrollbar
               ">
                 {editor && (
-                  <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }} shouldShow={({ editor }) => editor.isActive('image') || editor.isActive('link')}>
+                  <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }} shouldShow={({ editor }) => editor.isActive('link')}>
                     <div className="flex items-center bg-surface-container shadow-md rounded-md overflow-hidden border border-outline-variant text-on-surface text-[13px] font-body-md p-1 gap-1">
                       {editor.isActive('link') && (
                         <>
@@ -557,16 +584,7 @@ function EditorForm() {
                           </button>
                         </>
                       )}
-                      {editor.isActive('image') && (
-                        <>
-                          <span className="px-2 text-on-surface-variant text-[11px] font-label-caps tracking-widest uppercase">Size:</span>
-                          <button onClick={() => editor.chain().focus().updateAttributes('image', { src: editor.getAttributes('image').src.split('#')[0] + '#small' }).run()} className={`px-2 py-1 rounded transition-colors whitespace-nowrap ${editor.getAttributes('image').src?.endsWith('#small') ? 'bg-surface-variant' : 'hover:bg-surface-container-high'}`}>Small</button>
-                          <button onClick={() => editor.chain().focus().updateAttributes('image', { src: editor.getAttributes('image').src.split('#')[0] + '#medium' }).run()} className={`px-2 py-1 rounded transition-colors whitespace-nowrap ${editor.getAttributes('image').src?.endsWith('#medium') ? 'bg-surface-variant' : 'hover:bg-surface-container-high'}`}>Medium</button>
-                          <button onClick={() => editor.chain().focus().updateAttributes('image', { src: editor.getAttributes('image').src.split('#')[0] + '#large' }).run()} className={`px-2 py-1 rounded transition-colors whitespace-nowrap ${editor.getAttributes('image').src?.endsWith('#large') ? 'bg-surface-variant' : 'hover:bg-surface-container-high'}`}>Large</button>
-                          <div className="w-[1px] h-4 bg-outline-variant mx-1"></div>
-                          <button onClick={() => editor.chain().focus().updateAttributes('image', { src: editor.getAttributes('image').src.split('#')[0] }).run()} className={`px-2 py-1 rounded transition-colors whitespace-nowrap ${!editor.getAttributes('image').src?.includes('#') ? 'bg-surface-variant' : 'hover:bg-surface-container-high'}`}>Original</button>
-                        </>
-                      )}
+
                     </div>
                   </BubbleMenu>
                 )}
@@ -601,7 +619,7 @@ function EditorForm() {
                   <input
                     className="w-full bg-surface border border-outline-variant rounded-lg py-2 pl-[70px] pr-3 font-mono text-[14px] text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
                     type="text"
-                    value={slug || title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "")}
+                    value={slug || `${date.split('T')[0]}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "")}`}
                     onChange={e => setSlug(e.target.value)}
                     disabled={fetching}
                   />
