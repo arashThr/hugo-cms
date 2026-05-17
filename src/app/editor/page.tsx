@@ -6,6 +6,11 @@ import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import LinkExtension from '@tiptap/extension-link';
 import { Markdown } from 'tiptap-markdown';
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+import { common, createLowlight } from 'lowlight';
+import 'highlight.js/styles/github-dark.css';
+
+const lowlight = createLowlight(common);
 import { useState, useRef, useEffect, Suspense } from 'react';
 import { useSettings } from '@/components/SettingsProvider';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -44,6 +49,24 @@ function EditorForm() {
   const settingsRef = useRef(settings);
   useEffect(() => { settingsRef.current = settings; }, [settings]);
 
+  const initialStateRef = useRef<{ title: string, markdown: string, tags: string, slug: string } | null>(null);
+  const isStateInitializedRef = useRef(false);
+
+  useEffect(() => {
+    if (initializedPath !== undefined && !fetching && !isStateInitializedRef.current) {
+      initialStateRef.current = { title, markdown, tags, slug };
+      isStateInitializedRef.current = true;
+    }
+  }, [initializedPath, fetching, title, markdown, tags, slug]);
+
+  const checkHasChanges = () => {
+    if (!isStateInitializedRef.current || !initialStateRef.current) return false;
+    return title !== initialStateRef.current.title ||
+           markdown !== initialStateRef.current.markdown ||
+           tags !== initialStateRef.current.tags ||
+           slug !== initialStateRef.current.slug;
+  };
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const featuredImageInputRef = useRef<HTMLInputElement>(null);
   const [featuredImage, setFeaturedImage] = useState<string | null>(null);
@@ -53,7 +76,12 @@ function EditorForm() {
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        codeBlock: false,
+      }),
+      CodeBlockLowlight.configure({
+        lowlight,
+      }),
       Image,
       LinkExtension.configure({
         openOnClick: false,
@@ -250,7 +278,7 @@ function EditorForm() {
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      const hasChanges = title || markdown || tags || slug;
+      const hasChanges = checkHasChanges();
       if (hasChanges && !publishing) {
         e.preventDefault();
         e.returnValue = '';
@@ -258,7 +286,7 @@ function EditorForm() {
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [title, markdown, tags, slug, publishing]);
+  }, [title, markdown, tags, slug, publishing, initializedPath, fetching]);
 
   // Prevent default link clicks within the editor natively
   useEffect(() => {
@@ -274,7 +302,7 @@ function EditorForm() {
 
   const handleCancel = (e: React.MouseEvent) => {
     e.preventDefault();
-    const hasChanges = title || markdown || tags || slug;
+    const hasChanges = checkHasChanges();
     if (hasChanges && !publishing) {
       if (!editPath) {
         setShowCancelModal(true);
