@@ -585,8 +585,8 @@ function EditorForm() {
                 prose-p:text-base
                 prose-a:text-blue-600 hover:prose-a:text-blue-500
                 prose-blockquote:border-l-4 prose-blockquote:pl-4 prose-blockquote:text-gray-500
-                prose-code:bg-surface-container-high prose-code:px-1 prose-code:rounded
-                prose-pre:bg-surface-container-highest prose-pre:text-on-surface
+                [&_:not(pre)>code]:bg-surface-container-high [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:rounded
+                [&_pre]:!bg-[#0d1117] [&_pre]:!text-[#c9d1d9] [&_pre_code]:!bg-transparent [&_pre_code]:!p-0
                 [&_.ProseMirror]:min-h-[500px]
                 [&_.ProseMirror]:outline-none
                 overflow-y-auto
