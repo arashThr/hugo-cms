@@ -23,10 +23,10 @@ export function LandingPage() {
           {/* Hero Section */}
           <div className="flex-1 text-center md:text-left flex flex-col items-center md:items-start gap-lg">
             <h1 className="font-headline-xl text-[36px] md:text-[48px] leading-[1.2] tracking-[-0.02em] font-bold text-primary max-w-[700px]">
-              A Git-Based CMS for Hugo
+              A Simple Front-end interface for Hugo
             </h1>
             <p className="font-body-lg text-[18px] leading-[1.7] text-on-surface-variant max-w-[600px]">
-              An open-source, mobile-ready CMS for your Hugo blog. Enjoy rich text editing and easy image insertion without touching the terminal.
+              An open-source, mobile-ready interface for your Hugo blog. Enjoy rich text editing and easy image insertion, all running in your browser with no backend.
             </p>
             <div className="flex gap-md mt-sm">
               <button onClick={() => signIn("github")} className="bg-primary text-on-primary font-body-md text-[15px] px-6 py-3 rounded-lg hover:shadow-[0_4px_14px_0_rgba(0,0,0,0.1)] transition-all">
@@ -39,7 +39,7 @@ export function LandingPage() {
           <div className="flex-1 w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-slate-100 dark:bg-slate-800 relative aspect-[1400/900] flex items-center justify-center ring-4 ring-white dark:ring-slate-900">
             {/* The image will fill the entire container */}
             <img src="/editor-screenshot.png" alt="Editor Screenshot" className="absolute inset-0 w-full h-full object-cover z-10" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-            
+
             {/* Fallback when image is missing or broken */}
             <div className="text-slate-400 dark:text-slate-500 flex flex-col items-center gap-2 relative p-4 text-center">
               <span className="material-symbols-outlined text-[48px]">image</span>
@@ -90,7 +90,7 @@ export function LandingPage() {
             <div className="absolute inset-0 bg-primary/10"></div>
             <div className="absolute bottom-[24px] left-[24px] right-[24px]">
               <span className="font-label-caps text-[12px] font-semibold text-primary uppercase tracking-widest bg-white/80 backdrop-blur px-2 py-1 rounded inline-block mb-2">Open Source</span>
-              <p className="font-headline-md text-[24px] font-semibold text-primary">Free forever, host it anywhere.</p>
+              <p className="font-headline-md text-[24px] font-semibold text-primary">Free forever, run in your browser.</p>
             </div>
           </div>
         </section>

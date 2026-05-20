@@ -1,6 +1,6 @@
-# Hugo CMS Web Application
+# Hugo-Flow: Git-based Front-end interface for Hugo
 
-A custom, web-based Content Management System for your static Hugo website.
+A custom, web-based Front-end interface for your static Hugo website.
 
 ## Features
 - **GitHub Integration:** Commit files directly to your repository via the GitHub API.

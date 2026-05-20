@@ -10,8 +10,8 @@ const literata = Literata({ subsets: ["latin"], variable: "--font-literata" });
 const nunitoSans = Nunito_Sans({ subsets: ["latin"], variable: "--font-nunito-sans" });
 
 export const metadata: Metadata = {
-  title: "HugoFlow - The Modern CMS for Hugo",
-  description: "A clinical, high-velocity content management system designed specifically for Hugo.",
+  title: "HugoFlow - The Modern Git-based Front-end interface for Hugo",
+  description: "A clean, Git-based Front-end interface for Hugo.",
 };
 
 export default function RootLayout({
