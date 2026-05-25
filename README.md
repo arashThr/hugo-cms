@@ -1,6 +1,6 @@
 # Hugo-Flow: Front-end interface for Hugo blogs on GitHub
 
-A custom, web-based Front-end interface for your static Hugo website.
+A web-based front-end interface for Hugo static blogs hosted on GitHub.
 
 **Start writing blog posts:** [hugo-flow.arashtaher.com/](https://hugo-flow.arashtaher.com/)
 
