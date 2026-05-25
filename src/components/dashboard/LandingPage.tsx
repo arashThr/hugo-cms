@@ -23,10 +23,10 @@ export function LandingPage() {
           {/* Hero Section */}
           <div className="flex-1 text-center md:text-left flex flex-col items-center md:items-start gap-lg">
             <h1 className="font-headline-xl text-[36px] md:text-[48px] leading-[1.2] tracking-[-0.02em] font-bold text-primary max-w-[700px]">
-              A Simple Front-end interface for Hugo
+              A Simple Front-end interface for Hugo blogs on GitHub
             </h1>
             <p className="font-body-lg text-[18px] leading-[1.7] text-on-surface-variant max-w-[600px]">
-              An open-source, mobile-ready interface for your Hugo blog. Enjoy rich text editing and easy image insertion, all running in your browser with no backend.
+              An open-source, mobile-ready interface for your Hugo blog, with rich text editing and easy image insertion. Stateless, no configs, no extra permissions.
             </p>
             <div className="flex gap-md mt-sm">
               <button onClick={() => signIn("github")} className="bg-primary text-on-primary font-body-md text-[15px] px-6 py-3 rounded-lg hover:shadow-[0_4px_14px_0_rgba(0,0,0,0.1)] transition-all">

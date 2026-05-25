@@ -1,12 +1,27 @@
-# Hugo-Flow: Git-based Front-end interface for Hugo
+# Hugo-Flow: Front-end interface for Hugo blogs on GitHub
 
 A custom, web-based Front-end interface for your static Hugo website.
+
+**Start writing blog posts:** [hugo-flow.arashtaher.com/](https://hugo-flow.arashtaher.com/)
 
 ## Features
 - **GitHub Integration:** Commit files directly to your repository via the GitHub API.
 - **Dynamic Configuration:** Select your repository and paths dynamically via the UI.
 - **Dual Editor Mode:** Switch seamlessly between a WYSIWYG Rich Text editor and a raw Markdown editor.
 - **Image Uploads:** Upload images and have them automatically pushed as base64 blobs alongside your markdown post.
+
+## Philosophy & Niche
+
+There are several established alternatives in the Git CMS space (like Decap CMS, Sveltia CMS, Pages CMS, and Quiqr). However, they generally require you to trade simplicity for flexibility. For example:
+- **Decap CMS / Sveltia CMS:** You must install and configure the CMS directly inside your repository.
+- **Pages CMS:** Requires you to install a GitHub App on your account/organization and manage a config file.
+- **Quiqr:** Requires downloading a desktop app.
+
+**Hugo-Flow is different.** The goal is total **zero-setup simplicity**. 
+
+By exclusively supporting GitHub repositories and interacting entirely through the GitHub API, the application remains completely stateless, secure, and configuration-free. There are no extra files added to your repo and no intrusive permission scopes required. 
+
+You are literally two clicks away from editing a post: just **Sign in with GitHub**, select your repository, and start writing.
 
 ## Local Development
 
