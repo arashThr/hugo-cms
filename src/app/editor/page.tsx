@@ -82,7 +82,9 @@ function EditorForm() {
       CodeBlockLowlight.configure({
         lowlight,
       }),
-      Image,
+      Image.configure({
+        inline: true,
+      }),
       LinkExtension.configure({
         openOnClick: false,
         HTMLAttributes: {
@@ -391,7 +393,7 @@ function EditorForm() {
         if (viewMode === 'rich' && editor) {
           editor.chain().focus().setImage({ src: base64, alt: filename }).run();
         } else {
-          const imageMarkdownString = `\n![${filename}](${imageMarkdownPath})\n`;
+          const imageMarkdownString = `\n\n![${filename}](${imageMarkdownPath})\n\n`;
           if (textareaRef.current) {
             const textarea = textareaRef.current;
             const start = textarea.selectionStart;
